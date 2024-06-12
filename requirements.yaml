@@ -1,0 +1,16 @@
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python =3.10  # bioconda limitation
+  - python-igraph
+  - matplotlib-base
+  - networkx
+  - numpy
+  - pandas
+  - scanpy
+
+  # dev
+  - black
+  - isort
+  - pytest
