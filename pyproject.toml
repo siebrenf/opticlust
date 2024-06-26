@@ -8,13 +8,13 @@ maintainers = [
     {name = "Siebren Frölich", email = "siebrenf@gmail.com"},
 ]
 
-requires-python = ">=3.7"
+requires-python = ">=3.9"
 dependencies = [
-    "igraph",  # conda: python-igraph
-    "matplotlib>=3.4",  # conda: matplotlib-base
-    "networkx>=2.3",
-    "numpy>=1.17",
-    "scanpy>=1.9.2",
+    "igraph>=0.10",
+    "matplotlib>=3.6",
+    "networkx>=2.7",
+    "numpy>=1.23",
+    "scanpy>=1.10",
 ]
 
 dynamic = ["version"]
