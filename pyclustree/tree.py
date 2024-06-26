@@ -5,9 +5,7 @@ import networkx as nx
 import scanpy as sc
 
 
-def clustree(
-    adata, columns, rename_cluster=True, cluster2color=None, colors=None
-):
+def clustree(adata, columns, rename_cluster=True, cluster2color=None, colors=None):
     """
     Map the clusters to a tree structure.
     The resolution descends along the y-axis (min at the top, max at the bottom),
@@ -39,9 +37,7 @@ def clustree(
     y_ticks = []  # plot label
     y_labels = []  # plot label
     if column.count("_") != 2:
-        raise ValueError(
-            "Column names must be in the shape '[method]_res_[res]'"
-        )
+        raise ValueError("Column names must be in the shape '[method]_res_[res]'")
     method = column.split("_", 1)[0]
     if method not in ["leiden", "louvain"]:
         raise ValueError(
@@ -113,6 +109,7 @@ def clustree(
             edges = {}
             for c in cluster2barcodes[r]:
                 best = -1, []
+                name = f"{r}_{c}"
                 for c_prev, barcodes_prev in cluster2barcodes[r_prev].items():
                     name_prev = f"{r_prev}_{c_prev}"
                     if name_prev not in edges:
@@ -125,23 +122,23 @@ def clustree(
                     elif overlap == best[0]:  # edge case
                         best[1].append(name_prev)
 
-                name = f"{r}_{c}"
+                    # add the edge to the graph
+                    if overlap:
+                        g.add_edge(name_prev, name, size=overlap)
+
                 overlap, names_prev = best
                 for name_prev in names_prev:
                     edges[name_prev][name] = overlap
 
             # per parent cluster, sort daughter clusters by overlap (descending)
             for name_prev, md in edges.items():
-                md = dict(
-                    sorted(md.items(), key=lambda item: item[1], reverse=True)
-                )
+                md = dict(sorted(md.items(), key=lambda item: item[1], reverse=True))
                 edges[name_prev] = md
 
             # add the daughters to the graph
             cluster2barcodes_reordered = {}
             for name_prev, md in edges.items():
                 for name, overlap in md.items():
-                    g.add_edge(name_prev, name, size=overlap)
 
                     # mirror sorting in cluster2barcodes
                     c = name.split("_")[1]
@@ -160,27 +157,6 @@ def clustree(
                     x = x + dx
 
             cluster2barcodes[r] = cluster2barcodes_reordered
-
-            #     for c, overlap in edges.items():
-            #         name = f"{r}_{c}"
-            #         g.add_edge(name_prev, name, size=overlap)
-            #         if c not in order:
-            #             order.append(c)
-            #
-            #             barcodes = cluster2barcodes[r][c]
-            #             size_node = len(barcodes)
-            #             dx = (size_node / n_cells) * n_clusters
-            #             x_node = x + dx / 2
-            #             y_node = y
-            #             color_node = cluster2color[c]
-            #             g.add_node(
-            #                 name, x=x_node, y=y_node, size=size_node, color=color_node
-            #             )
-            #
-            #             x = x + dx
-            #
-            # # apply sorting
-            # cluster2barcodes[r] = {c: cluster2barcodes[r][c] for c in order}
 
         y -= 1
         r_prev = r
@@ -425,13 +401,23 @@ def clustree_plot(
         )
         ax.add_artist(leg1)
 
-        handles = [
-            arrows[edge_widths.index(min(edge_widths))],
-            arrows[edge_widths.index(sorted(edge_widths)[len(edge_widths) // 2])],
-            arrows[edge_widths.index(max(edge_widths))],
-        ]
         overlaps = sorted(nx.get_edge_attributes(g, "size").values())
-        labels = [overlaps[0], overlaps[len(overlaps)//2], overlaps[-1]]
+        handles = arrows
+        labels = overlaps
+        if len(handles) > 8:
+            ews = sorted(edge_widths)
+            i = len(edge_widths) // 8
+            handles = [
+                arrows[edge_widths.index(ews[i * 1])],
+                arrows[edge_widths.index(ews[i * 4])],
+                arrows[edge_widths.index(ews[i * 7])],
+            ]
+            i = len(overlaps) // 8
+            labels = [
+                overlaps[i * 1],
+                overlaps[i * 4],
+                overlaps[i * 7],
+            ]
         leg2 = ax.legend(
             handles,
             labels,
