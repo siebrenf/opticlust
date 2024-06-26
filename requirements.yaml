@@ -2,13 +2,16 @@ channels:
   - conda-forge
   - bioconda
 dependencies:
-  - python =3.10  # bioconda limitation
+  # scanpy =1.9.2 is the oldest version I'm willing to support
+  # min version dependencies based on the scanpy recipe
+  # max version dependencies based on bioconda limitations
+  - python >=3.7, <=3.10
   - python-igraph
-  - matplotlib-base
-  - networkx
-  - numpy
-  - pandas
-  - scanpy
+  - matplotlib-base >=3.4
+  - networkx >=2.3
+  - numpy >=1.17
+  - pandas >=1
+  - scanpy >=1.9.2
 
   # dev
   - black

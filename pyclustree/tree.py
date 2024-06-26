@@ -6,7 +6,7 @@ import scanpy as sc
 
 
 def clustree(
-    adata, cluster_resolutions, rename_cluster=True, cluster2color=None, colors=None
+    adata, columns, rename_cluster=True, cluster2color=None, colors=None
 ):
     """
     Map the clusters to a tree structure.
@@ -19,41 +19,53 @@ def clustree(
     Note that this does **not** alter the clusters or data in any way.
 
     :param adata: dataset
-    :param cluster_resolutions: a dict with number of clusters as key, and an adata.obs column as value.
+    :param columns: a list of adata.obs column names to use.
     :param rename_cluster: change the cluster names in adata.obs
     :param cluster2color: optional dictionary to specify the cluster to color relation
     :param colors: optional list of colors (default: scanpy defaults)
     :return: plot_data: a dictionary used in clustree_plot
     """
-    n_clusters = max(cluster_resolutions.keys())
-    n_resolutions = len([n for n in cluster_resolutions.keys() if n != 1])
+    n_clusters = 0
+    n_resolutions = len(columns)
+    column = None  # column with the highest number of clusters
+    for c in columns:
+        n = len(adata.obs[c].unique())
+        if n > n_clusters:
+            n_clusters = n
+            column = c
     n_cells = len(adata.obs)
 
     g = nx.DiGraph()
     y_ticks = []  # plot label
     y_labels = []  # plot label
-    column = cluster_resolutions[n_clusters]
     if column.count("_") != 2:
-        raise ValueError("Column names must be in the shape '[method]_res_[res]'")
+        raise ValueError(
+            "Column names must be in the shape '[method]_res_[res]'"
+        )
     method = column.split("_", 1)[0]
     if method not in ["leiden", "louvain"]:
-        raise ValueError("Column names must be in the shape '[method]_res_[res]'")
+        raise ValueError(
+            "Column names must be in the shape '[method]_res_[res]' (with [method] leiden or louvain)"
+        )
     try:
         float(column.rsplit("_", 1)[1])
     except ValueError:
-        raise ValueError("Column names must be in the shape '[method]_res_[res]'")
+        raise ValueError(
+            "Column names must be in the shape '[method]_res_[res]' (with [res] a float, e.g. 0.53)"
+        )
 
     if cluster2color is None:
         # set cluster colors
         cluster2color = {}
         if colors is None:
             colors = sc.pl.palettes.vega_20_scanpy  # default scanpy colors
-        column = cluster_resolutions[n_clusters]
-        for i, c in enumerate(adata.obs[column].cat.categories):
+        i = 0
+        for c in adata.obs[column].unique().sort_values():
             # repeat colors if there are more clusters than colors
-            while i > len(colors):
+            if i >= len(colors):
                 i -= len(colors)
             cluster2color[c] = colors[i]
+            i += 1
     elif colors:
         warnings.warn(
             "You provided both cluster2color and colors. "
@@ -63,15 +75,13 @@ def clustree(
     cluster2barcodes = {}
     r_prev = None
     y = n_resolutions - 1  # plot coordinate
-    for n_clusters_, column in cluster_resolutions.items():
-        if n_clusters_ == 1:
-            continue
-
+    for column in sorted(columns):
         r = column.rsplit("_", 1)[1]  # r = resolution, e.g. "0.30"
+        assert column == f"{method}_res_{r}"
         y_ticks.append(y)
         y_labels.append(r)
         cluster2barcodes[r] = {}
-        for c in adata.obs[column].unique().categories:  # c = cluster name, e.g. "3"
+        for c in adata.obs[column].unique().sort_values():  # c = cluster name, e.g. "3"
             barcodes = set(adata.obs[adata.obs[column] == c].index)
             cluster2barcodes[r][c] = barcodes
 
@@ -99,43 +109,78 @@ def clustree(
 
         else:
 
-            # sort cluster by overlap with parent clusters (descending)
-            order = []
-            for c_prev, barcodes_prev in cluster2barcodes[r_prev].items():
-                name_prev = f"{r_prev}_{c_prev}"
+            # assign each cluster to the parent with the largest overlap
+            edges = {}
+            for c in cluster2barcodes[r]:
+                best = -1, []
+                for c_prev, barcodes_prev in cluster2barcodes[r_prev].items():
+                    name_prev = f"{r_prev}_{c_prev}"
+                    if name_prev not in edges:
+                        edges[name_prev] = {}
 
-                # collect the overlap of this parent cluster with all cluster at the present resolution
-                edges = {}
-                for c in cluster2barcodes[r]:
                     barcodes = cluster2barcodes[r][c]
                     overlap = len(barcodes & barcodes_prev)
-                    if overlap:  # skip 0 overlap
-                        edges[c] = overlap
-                # and sort by overlap (descending)
-                edges = dict(
-                    sorted(edges.items(), key=lambda item: item[1], reverse=True)
+                    if overlap > best[0]:
+                        best = overlap, [name_prev]
+                    elif overlap == best[0]:  # edge case
+                        best[1].append(name_prev)
+
+                name = f"{r}_{c}"
+                overlap, names_prev = best
+                for name_prev in names_prev:
+                    edges[name_prev][name] = overlap
+
+            # per parent cluster, sort daughter clusters by overlap (descending)
+            for name_prev, md in edges.items():
+                md = dict(
+                    sorted(md.items(), key=lambda item: item[1], reverse=True)
                 )
+                edges[name_prev] = md
 
-                for c, overlap in edges.items():
-                    name = f"{r}_{c}"
+            # add the daughters to the graph
+            cluster2barcodes_reordered = {}
+            for name_prev, md in edges.items():
+                for name, overlap in md.items():
                     g.add_edge(name_prev, name, size=overlap)
-                    if c not in order:
-                        order.append(c)
 
-                        barcodes = cluster2barcodes[r][c]
-                        size_node = len(barcodes)
-                        dx = (size_node / n_cells) * n_clusters
-                        x_node = x + dx / 2
-                        y_node = y
-                        color_node = cluster2color[c]
-                        g.add_node(
-                            name, x=x_node, y=y_node, size=size_node, color=color_node
-                        )
+                    # mirror sorting in cluster2barcodes
+                    c = name.split("_")[1]
+                    barcodes = cluster2barcodes[r][c]
+                    cluster2barcodes_reordered[c] = barcodes
 
-                        x = x + dx
+                    size_node = len(barcodes)
+                    dx = (size_node / n_cells) * n_clusters
+                    x_node = x + dx / 2
+                    y_node = y
+                    color_node = cluster2color[c]
+                    g.add_node(
+                        name, x=x_node, y=y_node, size=size_node, color=color_node
+                    )
 
-            # apply sorting
-            cluster2barcodes[r] = {c: cluster2barcodes[r][c] for c in order}
+                    x = x + dx
+
+            cluster2barcodes[r] = cluster2barcodes_reordered
+
+            #     for c, overlap in edges.items():
+            #         name = f"{r}_{c}"
+            #         g.add_edge(name_prev, name, size=overlap)
+            #         if c not in order:
+            #             order.append(c)
+            #
+            #             barcodes = cluster2barcodes[r][c]
+            #             size_node = len(barcodes)
+            #             dx = (size_node / n_cells) * n_clusters
+            #             x_node = x + dx / 2
+            #             y_node = y
+            #             color_node = cluster2color[c]
+            #             g.add_node(
+            #                 name, x=x_node, y=y_node, size=size_node, color=color_node
+            #             )
+            #
+            #             x = x + dx
+            #
+            # # apply sorting
+            # cluster2barcodes[r] = {c: cluster2barcodes[r][c] for c in order}
 
         y -= 1
         r_prev = r
@@ -370,7 +415,7 @@ def clustree_plot(
             i = len(labels) // 2
             handles = [handles[0], handles[i], handles[-1]]
             labels = [labels[0], labels[i], labels[-1]]
-        ax.legend(
+        leg1 = ax.legend(
             handles,
             labels,
             title="Cluster sizes",
@@ -378,6 +423,25 @@ def clustree_plot(
             bbox_to_anchor=(1, 0.85),
             **legend_kwargs,
         )
+        ax.add_artist(leg1)
+
+        handles = [
+            arrows[edge_widths.index(min(edge_widths))],
+            arrows[edge_widths.index(sorted(edge_widths)[len(edge_widths) // 2])],
+            arrows[edge_widths.index(max(edge_widths))],
+        ]
+        overlaps = sorted(nx.get_edge_attributes(g, "size").values())
+        labels = [overlaps[0], overlaps[len(overlaps)//2], overlaps[-1]]
+        leg2 = ax.legend(
+            handles,
+            labels,
+            title="Cluster overlap",
+            loc="center left",
+            bbox_to_anchor=(1, 0.50),
+            **legend_kwargs,
+        )
+        ax.add_artist(leg2)
+
         fig.subplots_adjust(right=0.8)
 
     ax.tick_params(left=True, bottom=False, labelleft=True, labelbottom=False)

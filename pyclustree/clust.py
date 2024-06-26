@@ -146,9 +146,11 @@ def clustering_plot(
     fig.subplots_adjust(right=0.7)
     plt.show()
 
-    cluster_resolutions = {
-        y: f"{method}_res_{x:4.2f}" for (y, x) in zip(y_clust, x_clust_med)
-    }
+    cluster_resolutions = []
+    for res, n_clusters in zip(x_clust_med, y_clust):
+        if n_clusters > 1:  # single cluster is not informative
+            cluster_resolutions.append(f"{method}_res_{res:4.2f}")
+
     if return_plot:
         return cluster_resolutions, fig, ax
     return cluster_resolutions

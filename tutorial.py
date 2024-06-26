@@ -13,19 +13,18 @@ adata = sc.datasets.pbmc68k_reduced()
 # create a UMAP
 sc.tl.umap(adata)
 
-# clustering (updates adata.obs)
+# clustering & plotting (updates adata.obs)
 columns = clustering(adata)
-cluster_resolutions = clustering_plot(adata, columns)
+tree_columns = clustering_plot(adata, columns)
 
-# plotting (updates adata.obs)
-plot_data = clustree(adata, cluster_resolutions, rename_cluster=False)
-clustree_plot(plot_data)
+# build tree & plotting (updates adata.obs)
+tree_data = clustree(adata, tree_columns, rename_cluster=True)
+clustree_plot(tree_data)
 
 # plot the UMAPs for each resolution
-plot_columns = [c for n, c in cluster_resolutions.items() if n > 1]  # len(clusters)>1
-sc.pl.umap(adata, color=plot_columns, legend_loc="on data", alpha=0.75, ncols=3)
+sc.pl.umap(adata, color=tree_columns, legend_loc="on data", alpha=0.75, ncols=3)
 
 # plot the top genes per cluster for each resolution
-for column in plot_columns:
+for column in tree_columns:
     sc.tl.rank_genes_groups(adata, column)
     sc.pl.rank_genes_groups_heatmap(adata, n_genes=5, show_gene_labels=True)
