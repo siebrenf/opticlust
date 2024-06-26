@@ -22,6 +22,7 @@ The UMAPs and cluster tree can be compared immediately due to the automatic rena
 Without renaming and recoloring, figures would have looked like this:
 
 For example, note how cluster 2 becomes cluster 3 at resolution 0.53.
+
 ![](imgs/tree_plot_default.png)
 
 ![](imgs/umaps_default.png)
@@ -31,4 +32,4 @@ For example, note how cluster 2 becomes cluster 3 at resolution 0.53.
 
 This tool was inspired by:
 - The original [Clustree](https://github.com/lazappi/clustree) R package.
-- This BioStars post by [firestar](https://www.biostars.org/p/9489313/#9489342).
+- This [BioStars post](https://www.biostars.org/p/9489313/#9489342) by firestar.
