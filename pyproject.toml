@@ -1,0 +1,41 @@
+[project]
+name = "pyclustree"
+description = "Single cell clustering at a glance"
+authors = [
+    {name = "Siebren Frölich", email = "siebrenf@gmail.com"},
+]
+maintainers = [
+    {name = "Siebren Frölich", email = "siebrenf@gmail.com"},
+]
+
+requires-python = ">=3.7"
+dependencies = [
+    "igraph",  # conda: python-igraph
+    "matplotlib>=3.4",  # conda: matplotlib-base
+    "networkx>=2.3",
+    "numpy>=1.17",
+    "scanpy>=1.9.2",
+]
+
+dynamic = ["version"]
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = [
+    "single-cell",
+    "clustering",
+    "clustree",
+    "scanpy",
+    "leiden",
+    "louvain",
+]
+
+[project.urls]
+Homepage = "https://github.com/siebrenf/pyclustree"
+Readme = "https://github.com/siebrenf/pyclustree/README.md"
+
+[build-system]
+requires = ["hatchling>=1.5.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "pyclustree/__init__.py"

@@ -10,7 +10,6 @@ dependencies:
   - matplotlib-base >=3.4
   - networkx >=2.3
   - numpy >=1.17
-  - pandas >=1
   - scanpy >=1.9.2
 
   # dev

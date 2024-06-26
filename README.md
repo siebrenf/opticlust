@@ -1,12 +1,30 @@
 # PyClustree
 
-Visualize single cell clusters at various resolutions.
+Single cell clustering at a glance. 
+Identify which clustering resolution(s) fit your data within minutes.
 
 PyClustree offers:
+  - Automated clustering (leiden/louvain) at various resolutions
+  - Automatic selection of significant resolutions
+  - Visualization of clusters per resolution and their relative compositions 
   - Easy to use, yet highly customizable Python API
-  - Quickly identify the clustering resolutions at which your data separates nicely
   - Cluster recoloring for PyClustree and UMAP visualization (see below)
 
+# Installation
+
+```sh
+git clone https://github.com/siebrenf/pyclustree.git
+pip install pyclustree
+```
+
+## Dev install
+
+```sh
+git clone https://github.com/siebrenf/pyclustree.git
+conda env create -n pyclustree -f pyclustree/requirements.yaml
+conda activate pyclustree
+pip install --editable . --no-deps --ignore-installed
+```
 
 # Tutorial output
 
