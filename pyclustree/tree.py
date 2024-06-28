@@ -197,71 +197,68 @@ def _clustering_rename(adata, g, cluster2barcodes, method):
     """
     rename_dict = {}
 
-    # bottom row: 1, 2, 3, 4, etc.
-    r = list(cluster2barcodes)[-1]
-    rename_dict[r] = {}
-    for n, c in enumerate(cluster2barcodes[r]):
-        rename_dict[r][c] = f"c{n}"
-    r_daughters = r
+    # find all cluster names used in adata.obs
+    all_clusters = set()
+    for r in cluster2barcodes:
+        for c in cluster2barcodes[r]:
+            all_clusters.add(f"c{c}")  # c prefix
+    all_clusters = natsorted(all_clusters)
 
-    # other rows: assign cluster to the largest daughter
-    for r_parents in list(cluster2barcodes)[:-1][::-1]:
-        rename_dict[r_parents] = {}
-        seen = []
-        buds = []
-        for c_parent, barcodes_parent in cluster2barcodes[r_parents].items():
+    # top row: assign clusters by size
+    r_parents = list(cluster2barcodes)[0]
+    rename_dict[r_parents] = {}
+    c_parents = sorted(
+        cluster2barcodes[r_parents].keys(),
+        key=lambda k: len(cluster2barcodes[r_parents][k]),
+        reverse=True,
+    )
+    for c_parent in c_parents:
+        rename_dict[r_parents][c_parent] = f"c{c_parent}"
+
+    # other rows:
+    # first assign daughter with the most overlap the cluster,
+    # then assign the remaining daughters a new cluster name
+    for r_daughters in list(cluster2barcodes)[1:]:
+        rename_dict[r_daughters] = {}
+        seen = set()
+        for c_parent in c_parents:
+            barcodes_parent = cluster2barcodes[r_parents][c_parent]
             best = None, 0
             for c_daughter, barcodes_daughter in cluster2barcodes[r_daughters].items():
                 if c_daughter in seen:
                     continue
-
                 overlap = len(barcodes_daughter & barcodes_parent)
                 if overlap > best[1]:
                     best = c_daughter, overlap
-
             c_daughter = best[0]
-            if c_daughter is None:
-                buds.append(c_parent)
+            if c_daughter is not None:
+                rename_dict[r_daughters][c_daughter] = rename_dict[r_parents][c_parent]
+                seen.add(c_daughter)
+
+        if len(cluster2barcodes[r_daughters]) == len(rename_dict[r_daughters]):
+            continue
+
+        c_daughters = sorted(
+            cluster2barcodes[r_daughters].keys(),
+            key=lambda k: len(cluster2barcodes[r_daughters][k]),
+            reverse=True,
+        )
+        for c_daughter in c_daughters:
+            if c_daughter in seen:
                 continue
-            rename_dict[r_parents][c_parent] = rename_dict[r_daughters][c_daughter]
-            seen.append(c_daughter)
+            seen.add(c_daughter)
+            for c in all_clusters:
+                if c in rename_dict[r_daughters].values():
+                    continue
+                rename_dict[r_daughters][c_daughter] = c
+                break
 
-        # when parent clusters merge into one daughter,
-        # rename the smaller parent with leftover cluster names.
-        if buds:
-            clusters = natsorted(set(rename_dict[r_daughters]) - set(seen))
-            for i, c_parent in enumerate(buds):
-                rename_dict[r_parents][c_parent] = rename_dict[r_daughters][clusters[i]]
-
-        r_daughters = r_parents
-
-    # re-order the names so they ascend from top to bottom
-    rename_dict2 = {}
-    clusters = set()
-    for r in rename_dict:
-        for c in rename_dict[r]:
-            clusters.add(rename_dict[r][c])
-    clusters = natsorted(clusters)
-    c2c = {}
-    for r in cluster2barcodes:
-        rename_dict2[r] = {}
-        for c_old in cluster2barcodes[r]:
-            c_new = rename_dict[r][c_old]
-            if c_new not in c2c:
-                c2c[c_new] = clusters.pop(0)
-            rename_dict2[r][c_old] = c2c[c_new]
-    rename_dict = rename_dict2
+        r_parents = r_daughters
+        c_parents = c_daughters
 
     # rename the clusters in adata
     for r, d in rename_dict.items():
         column = f"{method}_res_{r}"
-        # adata.obs[column] = (
-        #     adata.obs[column]
-        #         .astype("str")  # convert to string
-        #         .rename(d)  # relabel the clusters with "c" prefix
-        #         .str.removeprefix("c")  # "remove the "c" prefix
-        #         # .astype("category")  # convert back to categorical
-        # )
         adata.obs[column] = adata.obs[column].cat.rename_categories(d)
         # "remove the "c" prefix
         adata.obs[column] = adata.obs[column].str.removeprefix("c")
