@@ -10,9 +10,6 @@ plt.rcParams["font.family"] = "monospace"
 # load data (this dataset has been preprocessed already)
 adata = sc.datasets.pbmc68k_reduced()
 
-# create a UMAP
-sc.tl.umap(adata)
-
 # clustering & plotting (updates adata.obs)
 columns = clustering(adata)
 tree_columns = clustering_plot(adata, columns)

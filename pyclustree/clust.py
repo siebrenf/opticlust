@@ -22,8 +22,8 @@ def clustering(
     :param cluster_kwargs: kwargs passed on the cluster function
     :return: columns: list of column names generated in adata.obs
     """
-    if "umap" not in adata.uns.keys():
-        raise RuntimeError("A UMAP is required!")
+    if "pca" not in adata.uns.keys():
+        raise RuntimeError("A PCA is required!")
     if cluster_kwargs is None:
         cluster_kwargs = {}
         if method == "leiden":
@@ -148,7 +148,7 @@ def clustering_plot(
 
     cluster_resolutions = []
     for res, n_clusters in zip(x_clust_med, y_clust):
-        if n_clusters > 1:  # single cluster is not informative
+        if n_clusters > 1 and float(res) > 0:  # single cluster is not informative
             cluster_resolutions.append(f"{method}_res_{res:4.2f}")
 
     if return_plot:

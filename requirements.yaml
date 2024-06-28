@@ -3,9 +3,10 @@ channels:
   - bioconda
 dependencies:
   # min version dependencies based on the scanpy recipe
-  - python >=3.9  # bioconda: >=3.9, <=3.10
+  - python >=3.9, <=3.10  # upper limit due to bioconda
   - python-igraph >=0.10
   - matplotlib-base >=3.6
+  - natsort
   - networkx >=2.7
   - numpy >=1.23
   - scanpy >=1.10
