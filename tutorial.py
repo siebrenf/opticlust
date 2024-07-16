@@ -1,8 +1,11 @@
 import matplotlib.pyplot as plt
+import pandas as pd
 import scanpy as sc
+import warnings
 
 from pyclustree.clust import clustering, clustering_plot
 from pyclustree.tree import clustree, clustree_plot
+
 
 # configuration
 plt.rcParams["font.family"] = "monospace"
@@ -22,6 +25,7 @@ clustree_plot(tree_data)
 sc.pl.umap(adata, color=tree_columns, legend_loc="on data", alpha=0.75, ncols=3)
 
 # plot the top genes per cluster for each resolution
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 for column in tree_columns:
     sc.tl.rank_genes_groups(adata, column)
     sc.tl.dendrogram(adata, column)
