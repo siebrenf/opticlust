@@ -50,6 +50,7 @@ def clustering(
 def clustering_plot(
     adata,
     columns,
+    min_n_resolutions=1,
     window_size=5,
     figsize=(16, 8),
     subplot_kwargs=None,
@@ -60,12 +61,17 @@ def clustering_plot(
     Returns the median resolution for each number of clusters.
 
     :param adata: dataset
-    :param columns: list of adata.obs column names to use in the plot. Column names must be in the shape "[method]_res_[res]".
+    :param columns: list of adata.obs column names to use in the plot.
+    Column names must be in the shape "[method]_res_[res]".
+    :param min_n_resolutions: filters the list of representative cluster resolutions
+     by a minimum number of resolutions yielding the same number of clusters.
     :param window_size: width of the moving window.
     :param figsize: matplotlib figsize
     :param subplot_kwargs: kwargs passed on to plt.subplot
     :param return_plot: if True, also returns fig and ax
-    :return: cluster_resolutions: a dict with number of clusters as key, and a representative resolution as value.
+
+    :return: cluster_resolutions: a list of representative cluster resolutions,
+    matching column names in adata.obs.
     """
     if subplot_kwargs is None:
         subplot_kwargs = {}
@@ -97,7 +103,16 @@ def clustering_plot(
     x_clust_mean = []
     y_clust_mean = []
     for c in sorted(clust):
+        if c == 1:  # a single cluster is not informative
+            continue
         resolutions = clust[c]
+        # When many resolutions yield the same number of clusters,
+        # this can be considered a "stable" clustering.
+        # To reduce downstream analysis complexity, we can filter out
+        # any "unstable" clustering.
+        if x_clust_med and len(resolutions) < min_n_resolutions:
+            continue
+
         x_med = nearest(np.median(resolutions), resolutions)
         y_med = c
         if x_clust_med and x_med < x_clust_med[-1]:
@@ -185,8 +200,6 @@ def clustering_plot(
     # return the median resolution per number of cluster
     cluster_resolutions = []
     for res, n_clusters in zip(x_clust_med, y_clust_med):
-        if n_clusters == 1:  # a single cluster is not informative
-            continue
         cluster_resolutions.append(f"{method}_res_{res:4.2f}")
 
     if return_plot:
