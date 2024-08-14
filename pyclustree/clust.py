@@ -82,9 +82,57 @@ def clustering_plot(
     except ValueError:
         raise ValueError("Column names must be in the shape '[method]_res_[res]'")
     y = [len(adata.obs[c].unique()) for c in columns]
+
+    # for each number of clusters, store the resolutions
+    clust = {}
+    for i in range(len(y)):
+        c = y[i]
+        if c not in clust:
+            clust[c] = []
+        clust[c].append(x[i])
+
+    # for each number of clusters, store the mean and median resolution
+    x_clust_med = []
+    y_clust_med = []
+    x_clust_mean = []
+    y_clust_mean = []
+    for c in sorted(clust):
+        resolutions = clust[c]
+        x_med = nearest(np.median(resolutions), resolutions)
+        y_med = c
+        if x_clust_med and x_med < x_clust_med[-1]:
+            # We expect the the cluster resolution to increase with number of clusters.
+            # If this does not happen, skip the resolution with on the smallest
+            # sample size.
+            if len(resolutions) > len(clust[y_clust_med[-1]]):
+                x_clust_med[-1] = x_med  # skip the previous resolution
+                y_clust_med[-1] = y_med
+            else:
+                pass  # skip this resolution
+        else:
+            x_clust_med.append(x_med)
+            y_clust_med.append(y_med)
+
+        x_mean = nearest(np.mean(resolutions), resolutions)
+        y_mean = c
+        if x_clust_mean and x_mean < x_clust_mean[-1]:
+            # see above for explanation
+            if len(resolutions) > len(clust[y_clust_mean[-1]]):
+                x_clust_mean[-1] = x_mean  # skip the previous resolution
+                y_clust_mean[-1] = y_mean
+            else:
+                pass  # skip this resolution
+        else:
+            x_clust_mean.append(x_mean)
+            y_clust_mean.append(y_mean)
+
+    # plotting
     fig, ax = plt.subplots(figsize=figsize, **subplot_kwargs)
+
+    # 1) plot all resolutions
     ax.scatter(x, y, color="grey", marker="o", alpha=1.0, zorder=-10)
 
+    # 2) plot the moving average of all resolutions
     x_avg = x[(n - 1) // 2 : -(n - 1) // 2]
     y_avg = moving_average(y, n=n)
     ax.plot(
@@ -95,25 +143,13 @@ def clustering_plot(
         label=f"moving average (w={n})",
     )
 
-    x_clust_med = []
-    x_clust_mean = []
-    y_clust = []
-    clust = {}
-    for i in range(len(y)):
-        c = y[i]
-        if c not in clust:
-            clust[c] = []
-        clust[c].append(x[i])
-    for c, xs in clust.items():
-        x_clust_med.append(nearest(np.median(xs), xs))
-        x_clust_mean.append(nearest(np.mean(xs), xs))
-        y_clust.append(c)
-    # mean line > median line
-    # median scatter > mean scatter
-    ax.scatter(x_clust_mean, y_clust, c="C1", alpha=1, zorder=-8)
+    # 3 & 4) plot the mean and median resolution at each number of clusters
+    #   zorder: mean line > median line
+    #   zorder: median scatter > mean scatter
+    ax.scatter(x_clust_mean, y_clust_mean, c="C1", alpha=1, zorder=-8)
     ax.plot(
         x_clust_mean,
-        y_clust,
+        y_clust_mean,
         c="C1",
         ls="--",
         zorder=-5,
@@ -121,12 +157,12 @@ def clustering_plot(
     )
     ax.plot(
         x_clust_med,
-        y_clust,
+        y_clust_med,
         c="C0",
         zorder=-6,
         label=f"median resolution",
     )
-    for cx, cy in zip(x_clust_med, y_clust):
+    for cx, cy in zip(x_clust_med, y_clust_med):
         ax.scatter(
             cx,
             cy,
@@ -146,10 +182,12 @@ def clustering_plot(
     fig.subplots_adjust(right=0.7)
     plt.show()
 
+    # return the median resolution per number of cluster
     cluster_resolutions = []
-    for res, n_clusters in zip(x_clust_med, y_clust):
-        if n_clusters > 1 and float(res) > 0:  # single cluster is not informative
-            cluster_resolutions.append(f"{method}_res_{res:4.2f}")
+    for res, n_clusters in zip(x_clust_med, y_clust_med):
+        if n_clusters == 1:  # a single cluster is not informative
+            continue
+        cluster_resolutions.append(f"{method}_res_{res:4.2f}")
 
     if return_plot:
         return cluster_resolutions, fig, ax
