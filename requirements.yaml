@@ -10,6 +10,7 @@ dependencies:
   - networkx >=2.7
   - numpy >=1.23
   - scanpy >=1.10
+  - leidenalg >=0.10.2
 
   # dev
   - black
