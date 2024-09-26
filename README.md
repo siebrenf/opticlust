@@ -23,8 +23,7 @@ pip install pyclustree
 git clone https://github.com/siebrenf/pyclustree.git
 conda env create -n pyclustree -f pyclustree/requirements.yaml
 conda activate pyclustree
-cd pyclustree/
-pip install --editable . --no-deps --ignore-installed
+pip install --editable ./pyclustree --no-deps --ignore-installed
 ```
 
 # Tutorial output
