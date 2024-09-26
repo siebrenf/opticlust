@@ -15,6 +15,9 @@ adata = sc.datasets.pbmc68k_reduced()
 
 # clustering & plotting (updates adata.obs)
 columns = clustering(adata)
+# to select a different cluster args, e.g. flavor, use:
+# columns = clustering(adata, cluster_kwargs={"flavor":"leidenalg"})
+
 tree_columns = clustering_plot(adata, columns)
 
 # build tree & plotting (updates adata.obs)
