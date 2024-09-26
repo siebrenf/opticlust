@@ -15,9 +15,7 @@ adata = sc.datasets.pbmc68k_reduced()
 
 # clustering & plotting (updates adata.obs)
 columns = clustering(adata)
-
-# clustering & plotting (updates adata.obs)
-# alternative if you want to select a different cluster arg, e.g. flavor
+# to select a different cluster args, e.g. flavor, use:
 # columns = clustering(adata, cluster_kwargs={"flavor":"leidenalg"})
 
 tree_columns = clustering_plot(adata, columns)
@@ -28,11 +26,6 @@ clustree_plot(tree_data)
 
 # plot the UMAPs for each resolution
 sc.pl.umap(adata, color=tree_columns, legend_loc="on data", alpha=0.75, ncols=3)
-
-# if needed remove the raw data slot from the adata object
-# this is required since sc.tl.rank_genes_groups(adata, column, use_raw=False)
-# throws a silent error and raw values are still plotter, remove like this:
-# del adata.raw
 
 # plot the top genes per cluster for each resolution
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
