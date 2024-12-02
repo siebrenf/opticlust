@@ -1,11 +1,13 @@
 [project]
-name = "pyclustree"
-description = "Single cell clustering at a glance"
+name = "opticlust"
+description = "Single cell clustering and recommendation at a glance"
 authors = [
     {name = "Siebren Frölich", email = "siebrenf@gmail.com"},
+    {name = "Julian Arts", email = "julian.armando.arts@gmail.com"},
 ]
 maintainers = [
     {name = "Siebren Frölich", email = "siebrenf@gmail.com"},
+    {name = "Julian Arts", email = "julian.armando.arts@gmail.com"},
 ]
 
 requires-python = ">=3.9"
@@ -15,9 +17,10 @@ dependencies = [
     "networkx>=2.7",
     "numpy>=1.23",
     "scanpy>=1.10",
+    "leidenalg >=0.10.2",
 ]
 
-dynamic = ["version"]
+version = "0.2.0"
 readme = "README.md"
 license = {file = "LICENSE"}
 keywords = [
