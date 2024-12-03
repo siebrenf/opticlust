@@ -3,27 +3,30 @@
 Single cell clustering at a glance. 
 Identify which clustering resolution(s) fit your data within minutes.
 
-PyClustree offers:
+Opticlust currently offers:
   - Automated clustering (leiden/louvain) at various resolutions
   - Automatic selection of significant resolutions
   - Visualization of clusters per resolution and their relative compositions 
   - Easy to use, yet highly customizable Python API
   - Cluster recoloring for PyClustree and UMAP visualization (see below)
 
+Opticlust will offer:
+  - Clustering recommendation based on intra- and intercluster metrics
+
 # Installation
 
 ```sh
-git clone https://github.com/siebrenf/pyclustree.git
-pip install pyclustree
+git clone https://github.com/siebrenf/opticlust.git
+pip install opticlust
 ```
 
 ## Dev install
 
 ```sh
-git clone https://github.com/siebrenf/pyclustree.git
-conda env create -n pyclustree -f pyclustree/requirements.yaml
-conda activate pyclustree
-pip install --editable ./pyclustree --no-deps --ignore-installed
+git clone https://github.com/siebrenf/opticlust.git
+conda env create -n opticlust -f opticlust/requirements.yaml
+conda activate opticlust
+pip install --editable ./opticlust --no-deps --ignore-installed
 ```
 
 # Tutorial output

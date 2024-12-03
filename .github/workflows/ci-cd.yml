@@ -1,0 +1,178 @@
+# This is a workflow for opticlust ci-cd
+
+name: CI/CD
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main and develop" branch
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  Ruff_linter:
+    # Set up operating system
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.12
+        
+    - name: Check-out repository
+      uses: actions/checkout@v2
+
+        
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        miniconda-version: "latest"
+        channels: bioconda, conda-forge, defaults
+        use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
+        auto-update-conda: true
+        auto-activate-base: true
+        
+    - name: Install opticlust pip
+      run: |
+            echo "begin: PATH=$PATH;"
+
+            conda create -y --name opticlust python=3.12 pip hatch
+
+            conda activate opticlust || true
+            echo "after conda activate opticlust: PATH=$PATH;"
+            which opticlust || true
+            # Use opticlust in ci-cd workflow
+
+    - name: pip install ruff
+      run: pip install ruff
+      
+    # Run the ruff linter and ignore the import package error E402
+    - name: Run Ruff linter clust.py
+      run: ruff check opticlust/clust.py --line-length 88 --extend-select C4,SIM,TCH,E4,E7,E9,F --ignore E402
+
+    # Run the ruff linter and ignore the import package error E402
+    - name: Run Ruff linter clust.py
+      run: ruff check opticlust/tree.py --line-length 88 --extend-select C4,SIM,TCH,E4,E7,E9,F --ignore E402
+      
+  ci:
+    needs: Ruff_linter
+    # Set up operating system
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+
+    - name: Cleanup build folder
+      run: |
+        ls -la ./
+        rm -rf ./* || true
+        rm -rf ./.??* || true
+        ls -la ./
+    
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.12
+        
+    - name: Check-out repository
+      uses: actions/checkout@v2
+
+      #- name: Install Python dependencies
+      #  uses: py-actions/py-dependency-install@v4
+        
+    - uses: conda-incubator/setup-miniconda@v2
+      with:
+        miniconda-version: "latest"
+        channels: bioconda, conda-forge, defaults
+        use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
+        auto-update-conda: true
+        auto-activate-base: true
+        
+    - name: Install opticlust pip
+      run: |
+            echo "begin: PATH=$PATH;"
+
+            conda create -y --name opticlust python=3.12 pip hatch
+
+            conda activate opticlust || true
+            echo "after conda activate opticlust: PATH=$PATH;"
+            which opticlust || true
+            # Use opticlust in ci-cd workflow
+      
+    # Builds a wheel needed for the CD part
+    - name: Build wheel of package
+      run: hatch build -t wheel
+      
+    - name: Creating needed directories
+      run: mkdir -p dist_artifacts
+      
+    - name: Copying artifact to artifact dir
+      run: cp dist/*.whl dist_artifacts/
+  
+    - name: Use the Upload Artifact GitHub Action
+      uses: actions/upload-artifact@v4
+      with: 
+        name: my-artifact
+        path: dist_artifacts/
+
+    # Update pip
+    - name: Update pip and setuptools
+      run: pip install --upgrade pip setuptools wheel
+
+    # Test if the created wheel file can be installed
+    - name: Install wheel of package into conda env
+      run: pip install dist/*.whl --force-reinstall
+      
+    # To do: implement sample data and unit testing
+
+  cd:
+    # Only run this job if the "ci" job passes
+    needs: ci
+    
+    # Only run this job if new work is pushed to "main"
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    # Set up operating system
+    runs-on: ubuntu-latest
+
+    # Define job steps
+    steps:
+
+    - name: Cleanup build folder
+      run: |
+        ls -la ./
+        rm -rf ./* || true
+        rm -rf ./.??* || true
+        ls -la ./
+        
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.12
+        
+    - name: Create dist dir
+      run: mkdir -p dist
+
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: my-artifact
+        path: dist
+  
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}

@@ -3,8 +3,8 @@ import pandas as pd
 import scanpy as sc
 import warnings
 
-from pyclustree.clust import clustering, clustering_plot
-from pyclustree.tree import clustree, clustree_plot
+from opticlust.clust import clustering, clustering_plot
+from opticlust.tree import clustree, clustree_plot
 
 
 # configuration
