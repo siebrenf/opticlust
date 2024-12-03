@@ -92,28 +92,36 @@ jobs:
       #- name: Install Python dependencies
       #  uses: py-actions/py-dependency-install@v4
         
-    - uses: conda-incubator/setup-miniconda@v2
-      with:
-        miniconda-version: "latest"
-        channels: bioconda, conda-forge, defaults
-        use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
-        auto-update-conda: true
-        auto-activate-base: true
+  #  - uses: conda-incubator/setup-miniconda@v2
+  #    with:
+  #      miniconda-version: "latest"
+  #      channels: bioconda, conda-forge, defaults
+  #      use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
+  #      auto-update-conda: true
+  #      auto-activate-base: true
         
-    - name: Install opticlust pip
-      run: |
-            echo "begin: PATH=$PATH;"
+  #  - name: Install opticlust pip
+  #    run: |
+  #          echo "begin: PATH=$PATH;"
 
-            conda create -y --name opticlust --file pyproject.toml
+  #          conda create -y --name opticlust --file pyproject.toml
 
-            conda activate opticlust || true
-            echo "after conda activate opticlust: PATH=$PATH;"
-            which opticlust || true
-            # Use opticlust in ci-cd workflow
+  #          conda activate opticlust || true
+  #          echo "after conda activate opticlust: PATH=$PATH;"
+  #          which opticlust || true
+  #          # Use opticlust in ci-cd workflow
 
-    # Install hatch from pip, correct conda workflow above
-    - name: conda activate opticlust for hatch
-      run: conda activate opticlust
+    # Create venv
+    - name: Create venv
+      run: python3 -m venv venv
+
+    # Activate venv
+    - name: Activate venv
+      run: source venv/bin/activate hatch
+
+   # Pip install hatch in venv
+    - name: Install hatch
+      run: pip install hatch
 
     # Builds a wheel needed for the CD part
     - name: Build wheel of package
@@ -136,7 +144,7 @@ jobs:
       run: pip install --upgrade pip setuptools wheel
 
     # Test if the created wheel file can be installed
-    - name: Install wheel of package into conda env
+    - name: Install wheel of package into venv
       run: pip install dist/*.whl --force-reinstall
       
     # To do: implement sample data and unit testing
