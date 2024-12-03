@@ -110,7 +110,11 @@ jobs:
             echo "after conda activate opticlust: PATH=$PATH;"
             which opticlust || true
             # Use opticlust in ci-cd workflow
-      
+
+    # Install hatch from pip, correct conda workflow above
+    - name: Pip install hatch
+      run: pip install hatch
+
     # Builds a wheel needed for the CD part
     - name: Build wheel of package
       run: hatch build -t wheel
