@@ -119,9 +119,9 @@ jobs:
     - name: Activate venv
       run: source venv/bin/activate
 
-   # Pip install hatch in venv
-    - name: Install hatch
-      run: pip install hatch
+   # Pip install uv and hatch in venv
+    - name: Install uv hatch
+      run: pip install uv hatch
 
     # Builds a wheel needed for the CD part
     - name: Build wheel of package
@@ -140,12 +140,12 @@ jobs:
         path: dist_artifacts/
 
     # Update pip
-    - name: Update pip and setuptools
-      run: pip install --upgrade pip setuptools wheel
+   # - name: Update pip and setuptools
+   #   run: pip install --upgrade pip setuptools wheel
 
     # Test if the created wheel file can be installed
-    - name: Install wheel of package into venv
-      run: pip install dist/*.whl --force-reinstall
+    - name: Install wheel of package into venv with uv for speed
+      run: uv pip install dist/*.whl --force-reinstall
       
     # To do: implement sample data and unit testing
 
