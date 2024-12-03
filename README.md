@@ -1,6 +1,6 @@
-# PyClustree
+# opticlust
 
-Single cell clustering at a glance. 
+Single cell clustering and recommendation at a glance. 
 Identify which clustering resolution(s) fit your data within minutes.
 
 Opticlust currently offers:
