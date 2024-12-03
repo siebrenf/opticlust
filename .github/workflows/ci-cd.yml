@@ -117,7 +117,7 @@ jobs:
 
     # Activate venv
     - name: Activate venv
-      run: source venv/bin/activate hatch
+      run: source venv/bin/activate
 
    # Pip install hatch in venv
     - name: Install hatch
