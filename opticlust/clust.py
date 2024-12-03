@@ -22,7 +22,7 @@ def clustering(
     :param cluster_kwargs: kwargs passed on the cluster function
     :return: columns: list of column names generated in adata.obs
     """
-    if "pca" not in adata.uns.keys():
+    if "pca" not in adata.uns: # removed .keys() due to ruff linter, check
         raise RuntimeError("A PCA is required!")
     if cluster_kwargs is None:
         cluster_kwargs = {}
@@ -168,14 +168,14 @@ def clustering_plot(
         c="C1",
         ls="--",
         zorder=-5,
-        label=f"mean resolution",
+        label="mean resolution",
     )
     ax.plot(
         x_clust_med,
         y_clust_med,
         c="C0",
         zorder=-6,
-        label=f"median resolution",
+        label="median resolution",
     )
     for cx, cy in zip(x_clust_med, y_clust_med):
         ax.scatter(
