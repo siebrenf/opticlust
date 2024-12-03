@@ -145,7 +145,7 @@ jobs:
 
     # Test if the created wheel file can be installed
     - name: Install wheel of package into venv with uv for speed
-      run: uv pip install dist/*.whl --force-reinstall --system
+      run: uv pip install --system dist/*.whl --force-reinstall
       
     # To do: implement sample data and unit testing
 
