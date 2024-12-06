@@ -1,4 +1,7 @@
 # opticlust
+[![CI/CD](https://github.com/siebrenf/opticlust/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/siebrenf/opticlust/actions/actions/workflows/ci-cd.yml)
+[![PyPI version](https://badge.fury.io/py/opticlust.svg)](https://badge.fury.io/py/opticlust)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
 Single cell clustering and recommendations at a glance. 
 Identify which clustering resolution(s) fit your data within minutes.
