@@ -1,6 +1,6 @@
 [project]
 name = "opticlust"
-description = "Single cell clustering and recommendation at a glance"
+description = "Single cell clustering and recommendations at a glance"
 authors = [
     {name = "Siebren Frölich", email = "siebrenf@gmail.com"},
     {name = "Julian Arts", email = "julian.armando.arts@gmail.com"},
