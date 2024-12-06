@@ -13,14 +13,20 @@ Opticlust currently offers:
 Opticlust will offer:
   - Clustering recommendations based on intra- and intercluster metrics
 
-# Installation
+# GitHub installation
 
 ```sh
 git clone https://github.com/siebrenf/opticlust.git
 pip install opticlust
 ```
 
-## Dev install
+# PyPi installation
+
+```sh
+pip install opticlust
+```
+
+## Dev installation
 
 ```sh
 git clone https://github.com/siebrenf/opticlust.git
