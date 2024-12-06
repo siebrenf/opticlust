@@ -1,6 +1,6 @@
 # opticlust
 
-Single cell clustering and recommendation at a glance. 
+Single cell clustering and recommendations at a glance. 
 Identify which clustering resolution(s) fit your data within minutes.
 
 Opticlust currently offers:
@@ -11,7 +11,7 @@ Opticlust currently offers:
   - Cluster recoloring for PyClustree and UMAP visualization (see below)
 
 Opticlust will offer:
-  - Clustering recommendation based on intra- and intercluster metrics
+  - Clustering recommendations based on intra- and intercluster metrics
 
 # Installation
 
