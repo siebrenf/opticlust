@@ -139,15 +139,13 @@ jobs:
         name: my-artifact
         path: dist_artifacts/
 
-    # Update pip
-   # - name: Update pip and setuptools
-   #   run: pip install --upgrade pip setuptools wheel
-
     # Test if the created wheel file can be installed
     - name: Install wheel of package into venv with uv for speed
       run: uv pip install --system dist/*.whl --force-reinstall
       
-    # To do: implement sample data and unit testing
+    # Run unit testing
+    - name: Run unit tests with pytest
+      run: pytest --disable-pytest-warnings -vvv
 
   cd:
     # Only run this job if the "ci" job passes
