@@ -32,26 +32,6 @@ jobs:
     - name: Check-out repository
       uses: actions/checkout@v2
 
-        
-    #- uses: conda-incubator/setup-miniconda@v2
-     # with:
-     #   miniconda-version: "latest"
-     #   channels: bioconda, conda-forge, defaults
-      #  use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
-       # auto-update-conda: true
-       # auto-activate-base: true
-        
-  #  - name: Install opticlust pip
-  #    run: |
-  #          echo "begin: PATH=$PATH;"
-
-  #          conda create -y --name opticlust --file pyproject.toml
-
-  #          conda activate opticlust || true
-   #         echo "after conda activate opticlust: PATH=$PATH;"
-   #         which opticlust || true
-   #         # Use opticlust in ci-cd workflow
-
     - name: pip install ruff
       run: pip install ruff
       
@@ -89,28 +69,6 @@ jobs:
     - name: Check-out repository
       uses: actions/checkout@v2
 
-      #- name: Install Python dependencies
-      #  uses: py-actions/py-dependency-install@v4
-        
-  #  - uses: conda-incubator/setup-miniconda@v2
-  #    with:
-  #      miniconda-version: "latest"
-  #      channels: bioconda, conda-forge, defaults
-  #      use-only-tar-bz2: true  # IMPORTANT: This needs to be set for caching to work properly!
-  #      auto-update-conda: true
-  #      auto-activate-base: true
-        
-  #  - name: Install opticlust pip
-  #    run: |
-  #          echo "begin: PATH=$PATH;"
-
-  #          conda create -y --name opticlust --file pyproject.toml
-
-  #          conda activate opticlust || true
-  #          echo "after conda activate opticlust: PATH=$PATH;"
-  #          which opticlust || true
-  #          # Use opticlust in ci-cd workflow
-
     # Create venv
     - name: Create venv
       run: python3 -m venv venv
@@ -120,8 +78,8 @@ jobs:
       run: source venv/bin/activate
 
    # Pip install uv and hatch in venv
-    - name: Install uv hatch
-      run: pip install uv hatch
+    - name: Install dist and test packages
+      run: pip install uv hatch pytest black isort
 
     # Builds a wheel needed for the CD part
     - name: Build wheel of package

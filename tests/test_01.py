@@ -1,5 +1,5 @@
 """
-run from the command line with:
+run from the command line after navigating inside the opticlust dir with:
     pytest --disable-pytest-warnings -vvv
 """
 
@@ -22,12 +22,12 @@ matplotlib.use("agg")  # This does not default plot images and lets pytest run
 def test_black_lint():
     base = dirname(dirname(__file__))
     sp.check_output(
-        "black " + f"{join(base, 'opticlust')} {join(base, 'tests')}",
+        "black " + f"{join(base, 'tests')}",
         shell=True,
     )
     sp.check_output(
         "isort --overwrite-in-place --profile black --conda-env requirements.yaml "
-        + f"{join(base, 'opticlust')} {join(base, 'tests')}",
+        + f"{join(base, 'tests')}",
         shell=True,
     )
 
