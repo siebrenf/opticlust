@@ -1,8 +1,9 @@
 """
-run from the command line after navigating inside the opticlust dir with:
+run from the command line (from the opticlust directory) with:
     pytest --disable-pytest-warnings -vvv
 """
 
+import os
 import subprocess as sp
 from os.path import dirname, join
 
@@ -16,17 +17,19 @@ from opticlust.clust import clustering, clustering_plot
 from opticlust.tree import clustree, clustree_plot
 
 matplotlib.use("agg")  # This stop images from showing and blocking pytest
+IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
 
 
+@pytest.mark.skipif(IN_GITHUB_ACTIONS, reason="Too late to lint!")
 def test_black_lint():
     base = dirname(dirname(__file__))
     sp.check_output(
-        "black " + f"{join(base, 'tests')}",
+        "black " + f"{join(base, 'opticlust')} {join(base, 'tests')}",
         shell=True,
     )
     sp.check_output(
         "isort --overwrite-in-place --profile black --conda-env requirements.yaml "
-        + f"{join(base, 'tests')}",
+        + f"{join(base, 'opticlust')} {join(base, 'tests')}",
         shell=True,
     )
 
