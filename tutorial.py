@@ -18,9 +18,9 @@ columns = clustering(adata)
 # to select a different cluster args, e.g. flavor, use:
 # columns = clustering(adata, cluster_kwargs={"flavor":"leidenalg"})
 
-# To pre-select promising clustering resolutions, use:
+# to pre-select promising clustering resolutions, use:
 tree_columns = clustering_plot(adata, columns)
-# Otherwise, use "columns" instead of "tree_columns" in code below
+# otherwise, use "columns" instead of "tree_columns" in code below
 
 # build tree & plotting (updates adata.obs)
 tree_data = clustree(adata, tree_columns, rename_cluster=True)
