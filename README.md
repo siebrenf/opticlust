@@ -11,7 +11,7 @@ Opticlust currently offers:
   - Automatic selection of significant resolutions
   - Visualization of clusters per resolution and their relative compositions 
   - Easy to use, yet highly customizable Python API
-  - Cluster recoloring for PyClustree and UMAP visualization (see below)
+  - Cluster recoloring for opticlust and UMAP visualization (see below)
 
 Opticlust will offer:
   - Clustering recommendations based on intra- and intercluster metrics
