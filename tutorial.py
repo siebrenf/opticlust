@@ -3,8 +3,8 @@ import pandas as pd
 import scanpy as sc
 import warnings
 
-from pyclustree.clust import clustering, clustering_plot
-from pyclustree.tree import clustree, clustree_plot
+from opticlust.clust import clustering, clustering_plot
+from opticlust.tree import clustree, clustree_plot
 
 
 # configuration
@@ -18,7 +18,9 @@ columns = clustering(adata)
 # to select a different cluster args, e.g. flavor, use:
 # columns = clustering(adata, cluster_kwargs={"flavor":"leidenalg"})
 
+# to pre-select promising clustering resolutions, use:
 tree_columns = clustering_plot(adata, columns)
+# otherwise, use "columns" instead of "tree_columns" in code below
 
 # build tree & plotting (updates adata.obs)
 tree_data = clustree(adata, tree_columns, rename_cluster=True)

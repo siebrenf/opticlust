@@ -1,29 +1,42 @@
-# PyClustree
+# opticlust
+[![CI/CD](https://github.com/siebrenf/opticlust/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/siebrenf/opticlust/actions/actions/workflows/ci-cd.yml)
+[![PyPI version](https://badge.fury.io/py/opticlust.svg)](https://badge.fury.io/py/opticlust)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-Single cell clustering at a glance. 
+Single cell clustering and recommendations at a glance. 
 Identify which clustering resolution(s) fit your data within minutes.
 
-PyClustree offers:
+Opticlust currently offers:
   - Automated clustering (leiden/louvain) at various resolutions
   - Automatic selection of significant resolutions
   - Visualization of clusters per resolution and their relative compositions 
   - Easy to use, yet highly customizable Python API
-  - Cluster recoloring for PyClustree and UMAP visualization (see below)
+  - Cluster recoloring for opticlust and UMAP visualization (see below)
+
+Opticlust will offer:
+  - Clustering recommendations based on intra- and intercluster metrics
 
 # Installation
+## GitHub
 
 ```sh
-git clone https://github.com/siebrenf/pyclustree.git
-pip install pyclustree
+git clone https://github.com/siebrenf/opticlust.git
+pip install opticlust
 ```
 
-## Dev install
+## PyPi
 
 ```sh
-git clone https://github.com/siebrenf/pyclustree.git
-conda env create -n pyclustree -f pyclustree/requirements.yaml
-conda activate pyclustree
-pip install --editable ./pyclustree --no-deps --ignore-installed
+pip install opticlust
+```
+
+## Develop
+
+```sh
+git clone https://github.com/siebrenf/opticlust.git
+conda env create -n opticlust -f opticlust/requirements.yaml
+conda activate opticlust
+pip install --editable ./opticlust --no-deps --ignore-installed
 ```
 
 # Tutorial output

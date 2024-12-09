@@ -261,6 +261,7 @@ def _clustering_rename(adata, g, cluster2barcodes, method):
         column = f"{method}_res_{r}"
         adata.obs[column] = adata.obs[column].cat.rename_categories(d)
         # "remove the "c" prefix
+        # converts the columns dtype object (used for stable UMAP cluster colors)
         adata.obs[column] = adata.obs[column].str.removeprefix("c")
 
     # leave the node name, but rename the node label
@@ -444,7 +445,7 @@ def clustree_plot(
     ax.tick_params(left=True, bottom=False, labelleft=True, labelbottom=False)
     ax.set_yticks(ticks=y_ticks, labels=y_labels)
     ax.set_ylabel(f"{method.capitalize()} clustering resolution")
-    ax.set_title("PyClustree")
+    ax.set_title("opticlust")
 
     plt.show()
 

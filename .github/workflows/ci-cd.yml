@@ -1,0 +1,146 @@
+# This is a workflow for opticlust ci-cd
+
+name: CI/CD
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main and develop" branch
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main", "develop" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  Ruff_linter:
+    # Set up operating system
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.12
+        
+    - name: Check-out repository
+      uses: actions/checkout@v2
+
+    - name: pip install ruff
+      run: pip install ruff
+      
+    # Run the ruff linter and ignore the import package error E402
+    - name: Run Ruff linter clust.py
+      run: ruff check opticlust/clust.py --line-length 88 --extend-select C4,SIM,TCH,E4,E7,E9,F --ignore E402
+
+    # Run the ruff linter and ignore the import package error E402
+    - name: Run Ruff linter tree.py
+      run: ruff check opticlust/tree.py --line-length 88 --extend-select C4,SIM,TCH,E4,E7,E9,F --ignore E402
+      
+  ci:
+    needs: Ruff_linter
+    # Set up operating system
+    runs-on: ubuntu-latest
+    
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    steps:
+
+    - name: Cleanup build folder
+      run: |
+        ls -la ./
+        rm -rf ./* || true
+        rm -rf ./.??* || true
+        ls -la ./
+    
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.12
+        
+    - name: Check-out repository
+      uses: actions/checkout@v2
+
+    # Create venv
+    - name: Create venv
+      run: python3 -m venv venv
+
+    # Activate venv
+    - name: Activate venv
+      run: source venv/bin/activate
+
+   # Pip install uv and hatch in venv
+    - name: Install dist and test packages
+      run: pip install uv hatch pytest black isort
+
+    # Builds a wheel needed for the CD part
+    - name: Build wheel of package
+      run: hatch build -t wheel
+      
+    - name: Creating needed directories
+      run: mkdir -p dist_artifacts
+      
+    - name: Copying artifact to artifact dir
+      run: cp dist/*.whl dist_artifacts/
+  
+    - name: Use the Upload Artifact GitHub Action
+      uses: actions/upload-artifact@v4
+      with: 
+        name: my-artifact
+        path: dist_artifacts/
+
+    # Test if the created wheel file can be installed
+    - name: Install wheel of package into venv with uv for speed
+      run: uv pip install --system dist/*.whl --force-reinstall
+      
+    # Run unit testing
+    - name: Run unit tests with pytest
+      run: pytest --disable-pytest-warnings -vvv
+
+  cd:
+    # Only run this job if the "ci" job passes
+    needs: ci
+    
+    # Only run this job if new work is pushed to "main"
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    # Set up operating system
+    runs-on: ubuntu-latest
+
+    # Define job steps
+    steps:
+
+    - name: Cleanup build folder
+      run: |
+        ls -la ./
+        rm -rf ./* || true
+        rm -rf ./.??* || true
+        ls -la ./
+        
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.12
+        
+    - name: Create dist dir
+      run: mkdir -p dist
+
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: my-artifact
+        path: dist
+  
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}

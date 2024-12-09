@@ -1,11 +1,13 @@
 [project]
-name = "pyclustree"
-description = "Single cell clustering at a glance"
+name = "opticlust"
+description = "Single cell clustering and recommendations at a glance"
 authors = [
     {name = "Siebren Frölich", email = "siebrenf@gmail.com"},
+    {name = "Julian Arts", email = "julian.armando.arts@gmail.com"},
 ]
 maintainers = [
     {name = "Siebren Frölich", email = "siebrenf@gmail.com"},
+    {name = "Julian Arts", email = "julian.armando.arts@gmail.com"},
 ]
 
 requires-python = ">=3.9"
@@ -15,6 +17,7 @@ dependencies = [
     "networkx>=2.7",
     "numpy>=1.23",
     "scanpy>=1.10",
+    "leidenalg >=0.10.2",
 ]
 
 dynamic = ["version"]
@@ -30,12 +33,12 @@ keywords = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/siebrenf/pyclustree"
-Readme = "https://github.com/siebrenf/pyclustree/README.md"
+Homepage = "https://github.com/siebrenf/opticlust"
+Readme = "https://github.com/siebrenf/opticlust/README.md"
 
 [build-system]
 requires = ["hatchling>=1.5.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "pyclustree/__init__.py"
+path = "opticlust/__init__.py"

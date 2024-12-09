@@ -22,7 +22,7 @@ def clustering(
     :param cluster_kwargs: kwargs passed on the cluster function
     :return: columns: list of column names generated in adata.obs
     """
-    if "pca" not in adata.uns.keys():
+    if "pca" not in adata.uns:
         raise RuntimeError("A PCA is required!")
     if cluster_kwargs is None:
         cluster_kwargs = {}
@@ -103,8 +103,6 @@ def clustering_plot(
     x_clust_mean = []
     y_clust_mean = []
     for c in sorted(clust):
-        if c == 1:  # a single cluster is not informative
-            continue
         resolutions = clust[c]
         # When many resolutions yield the same number of clusters,
         # this can be considered a "stable" clustering.
@@ -116,7 +114,7 @@ def clustering_plot(
         x_med = nearest(np.median(resolutions), resolutions)
         y_med = c
         if x_clust_med and x_med < x_clust_med[-1]:
-            # We expect the the cluster resolution to increase with number of clusters.
+            # We expect the cluster resolution to increase with number of clusters.
             # If this does not happen, skip the resolution with on the smallest
             # sample size.
             if len(resolutions) > len(clust[y_clust_med[-1]]):
@@ -168,14 +166,14 @@ def clustering_plot(
         c="C1",
         ls="--",
         zorder=-5,
-        label=f"mean resolution",
+        label="mean resolution",
     )
     ax.plot(
         x_clust_med,
         y_clust_med,
         c="C0",
         zorder=-6,
-        label=f"median resolution",
+        label="median resolution",
     )
     for cx, cy in zip(x_clust_med, y_clust_med):
         ax.scatter(
@@ -200,7 +198,8 @@ def clustering_plot(
     # return the median resolution per number of cluster
     cluster_resolutions = []
     for res, n_clusters in zip(x_clust_med, y_clust_med):
-        cluster_resolutions.append(f"{method}_res_{res:4.2f}")
+        if n_clusters > 1:  # a single cluster is not informative
+            cluster_resolutions.append(f"{method}_res_{res:4.2f}")
 
     if return_plot:
         return cluster_resolutions, fig, ax
