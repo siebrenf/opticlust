@@ -444,7 +444,7 @@ def clustree_plot(
     ax.tick_params(left=True, bottom=False, labelleft=True, labelbottom=False)
     ax.set_yticks(ticks=y_ticks, labels=y_labels)
     ax.set_ylabel(f"{method.capitalize()} clustering resolution")
-    ax.set_title("PyClustree")
+    ax.set_title("opticlust")
 
     plt.show()
 
