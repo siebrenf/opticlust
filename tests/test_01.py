@@ -4,11 +4,9 @@ run from the command line after navigating inside the opticlust dir with:
 """
 
 import subprocess as sp
-import warnings
 from os.path import dirname, join
 
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import pytest
@@ -17,7 +15,7 @@ import scanpy as sc
 from opticlust.clust import clustering, clustering_plot
 from opticlust.tree import clustree, clustree_plot
 
-matplotlib.use("agg")  # This does not default plot images and lets pytest run
+matplotlib.use("agg")  # This stop images from showing and blocking pytest
 
 
 def test_black_lint():
@@ -53,7 +51,7 @@ adata = sc.datasets.pbmc68k_reduced()
 
 
 def test_clustering_positive():
-    columns = clustering(adata)
+    columns = clustering(adata.copy())
     assert isinstance(columns, list) == 1
     assert len(columns) == 81
 
@@ -70,7 +68,7 @@ columns = clustering(adata)
 
 # Run unit tests on clustering plot and check length of list
 def test_clusteringplot_positive():
-    tree_columns = clustering_plot(adata, columns)
+    tree_columns = clustering_plot(adata.copy(), columns)
     assert isinstance(tree_columns, list) == 1
     assert len(tree_columns) == 11
 
@@ -78,7 +76,7 @@ def test_clusteringplot_positive():
 def test_clusteringplot_fail():
     with pytest.raises(Exception) as excinfo:
         columns = ["random1", "random2"]
-        tree_columns = clustering_plot(adata, columns)
+        tree_columns = clustering_plot(adata.copy(), columns)
     assert (
         str(excinfo.value) == "Column names must be in the shape '[method]_res_[res]'"
     )
@@ -89,7 +87,7 @@ tree_columns = clustering_plot(adata, columns)
 
 # Run unit tests on graph building and check if graph contains all
 def test_buildtree_tree_data():
-    tree_data = clustree(adata, tree_columns, rename_cluster=True)
+    tree_data = clustree(adata.copy(), tree_columns, rename_cluster=True)
     assert isinstance(tree_data, dict) == 1
     assert "graph" in tree_data
     assert "dimensions" in tree_data
@@ -98,7 +96,7 @@ def test_buildtree_tree_data():
 
 # Run unit tests on graph building and check if graph contains all
 def test_buildtree_tree_data_rename_false():
-    tree_data = clustree(adata, tree_columns, rename_cluster=False)
+    tree_data = clustree(adata.copy(), tree_columns, rename_cluster=False)
     assert isinstance(tree_data, dict) == 1
     assert "graph" in tree_data
     assert "dimensions" in tree_data
@@ -111,7 +109,7 @@ columns2 = clustering(adata2)  # , samples=3
 
 
 def test_buildtree_column_data():
-    tree_data2 = clustree(adata2, columns2, rename_cluster=True)
+    tree_data2 = clustree(adata2.copy(), columns2, rename_cluster=True)
     assert isinstance(tree_data2, dict) == 1
     assert "graph" in tree_data2
     assert "dimensions" in tree_data2
@@ -119,7 +117,7 @@ def test_buildtree_column_data():
 
 
 def test_buildtree_column_data_rename_false():
-    tree_data2 = clustree(adata2, columns2, rename_cluster=False)
+    tree_data2 = clustree(adata2.copy(), columns2, rename_cluster=False)
     assert isinstance(tree_data2, dict) == 1
     assert "graph" in tree_data2
     assert "dimensions" in tree_data2
@@ -129,16 +127,15 @@ def test_buildtree_column_data_rename_false():
 def test_buildtree_fail():
     with pytest.raises(Exception) as excinfo:
         tree_columns3 = ["random1", "random2"]
-        tree_data3 = clustree(adata, tree_columns3, rename_cluster=True)
+        tree_data3 = clustree(adata.copy(), tree_columns3, rename_cluster=True)
     assert str(excinfo.value) == "columns not found in adata.obs: 'random1'"
 
 
 def test_plottree_tree_data():
-    tree_data = clustree(adata, tree_columns, rename_cluster=False)
+    tree_data = clustree(adata.copy(), tree_columns, rename_cluster=False)
     clustree_plot(tree_data)
 
 
-# Test why this test below fails
-#def test_plottree_tree_data_rename_cluster():
-#    tree_data = clustree(adata, tree_columns, rename_cluster=True)
-#    clustree_plot(tree_data)
+def test_plottree_tree_data_rename_cluster():
+    tree_data = clustree(adata.copy(), tree_columns, rename_cluster=True)
+    clustree_plot(tree_data)
