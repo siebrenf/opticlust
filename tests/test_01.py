@@ -15,6 +15,7 @@ import scanpy as sc
 
 from opticlust.clust import clustering, clustering_plot
 from opticlust.tree import clustree, clustree_plot
+from opticlust.recommend import resolutionrecommender
 
 matplotlib.use("agg")  # This stop images from showing and blocking pytest
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
@@ -142,3 +143,8 @@ def test_plottree_tree_data():
 def test_plottree_tree_data_rename_cluster():
     tree_data = clustree(adata.copy(), tree_columns, rename_cluster=True)
     clustree_plot(tree_data)
+
+# To do: write nice unit tests around these:
+resolutionrecommender(adata.copy(), tree_columns)
+
+resolutionrecommender(adata2.copy(), columns2, method= "order", test_order = "CH_DB_SH")
