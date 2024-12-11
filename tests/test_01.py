@@ -14,8 +14,8 @@ import pytest
 import scanpy as sc
 
 from opticlust.clust import clustering, clustering_plot
-from opticlust.tree import clustree, clustree_plot
 from opticlust.recommend import resolutionrecommender
+from opticlust.tree import clustree, clustree_plot
 
 matplotlib.use("agg")  # This stop images from showing and blocking pytest
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
@@ -144,7 +144,69 @@ def test_plottree_tree_data_rename_cluster():
     tree_data = clustree(adata.copy(), tree_columns, rename_cluster=True)
     clustree_plot(tree_data)
 
-# To do: write nice unit tests around these:
-resolutionrecommender(adata.copy(), tree_columns)
 
-resolutionrecommender(adata2.copy(), columns2, method= "order", test_order = "CH_DB_SH")
+def test_resolutionrecommender_tree_data_median():
+    all, low, medium, high = resolutionrecommender(adata.copy(), tree_columns)
+    assert all == "leiden_res_0.03"
+    assert low == "leiden_res_0.03"
+    assert medium == "leiden_res_0.88"
+    assert high == "leiden_res_1.60"
+
+
+def test_resolutionrecommender_column_data_median():
+    all, low, medium, high = resolutionrecommender(
+        adata2.copy(), columns2, rank_method="median", test_order="SH_CH_DB"
+    )
+    assert all == "leiden_res_0.03"
+    assert low == "leiden_res_0.03"
+    assert medium == "leiden_res_1.07"
+    assert high == "leiden_res_1.43"
+
+
+#
+def test_resolutionrecommender_column_data_median_order():
+    all, low, medium, high = resolutionrecommender(
+        adata2.copy(), columns2, rank_method="mean", test_order="DB_CH_SH"
+    )
+    assert all == "leiden_res_1.18"
+    assert low == "leiden_res_0.03"
+    assert medium == "leiden_res_1.18"
+    assert high == "leiden_res_1.30"
+
+
+def test_resolutionrecommender_column_data_orderSH():
+    all, low, medium, high = resolutionrecommender(
+        adata2.copy(), columns2, rank_method="order", test_order="SH_CH_DB"
+    )
+    assert all == "leiden_res_0.03"
+    assert low == "leiden_res_0.03"
+    assert medium == "leiden_res_1.07"
+    assert high == "leiden_res_1.30"
+
+
+def test_resolutionrecommender_column_data_orderCH():
+    all, low, medium, high = resolutionrecommender(
+        adata2.copy(), columns2, rank_method="order", test_order="CH_DB_SH"
+    )
+    assert all == "leiden_res_1.38"
+    assert low == "leiden_res_0.68"
+    assert medium == "leiden_res_1.20"
+    assert high == "leiden_res_1.38"
+
+
+def test_resolutionrecommender_column_data_orderDB():
+    all, low, medium, high = resolutionrecommender(
+        adata2.copy(), columns2, rank_method="order", test_order="DB_CH_SH"
+    )
+    assert all == "leiden_res_0.03"
+    assert low == "leiden_res_0.03"
+    assert medium == "leiden_res_1.05"
+    assert high == "leiden_res_1.43"
+
+
+def test_resolutionrecommender_column_data_modeFail():
+    with pytest.raises(Exception) as excinfo:
+        resolutionrecommender(
+            adata2.copy(), columns2, rank_method="mode", test_order="DB_CH_SH"
+        )
+    assert str(excinfo.value) == "rank_method must be: median, mean or order"
