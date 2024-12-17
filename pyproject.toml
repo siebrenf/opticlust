@@ -13,11 +13,12 @@ maintainers = [
 requires-python = ">=3.9"
 dependencies = [
     "igraph>=0.10",
+    "leidenalg >=0.10.2",
     "matplotlib>=3.6",
+    "natsort",
     "networkx>=2.7",
     "numpy>=1.23",
     "scanpy>=1.10",
-    "leidenalg >=0.10.2",
 ]
 
 dynamic = ["version"]

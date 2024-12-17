@@ -155,7 +155,7 @@ def test_resolutionrecommender_tree_data_median():
 
 def test_resolutionrecommender_column_data_median():
     all, low, medium, high = resolutionrecommender(
-        adata2.copy(), columns2, rank_method="median", test_order="SH_CH_DB"
+        adata2.copy(), columns2, rank_method="median", tests="SH_CH_DB"
     )
     assert all == "leiden_res_0.03"
     assert low == "leiden_res_0.03"
@@ -166,7 +166,7 @@ def test_resolutionrecommender_column_data_median():
 #
 def test_resolutionrecommender_column_data_median_order():
     all, low, medium, high = resolutionrecommender(
-        adata2.copy(), columns2, rank_method="mean", test_order="DB_CH_SH"
+        adata2.copy(), columns2, rank_method="mean", tests="DB_CH_SH"
     )
     assert all == "leiden_res_1.18"
     assert low == "leiden_res_0.03"
@@ -176,7 +176,7 @@ def test_resolutionrecommender_column_data_median_order():
 
 def test_resolutionrecommender_column_data_orderSH():
     all, low, medium, high = resolutionrecommender(
-        adata2.copy(), columns2, rank_method="order", test_order="SH_CH_DB"
+        adata2.copy(), columns2, rank_method="order", tests="SH_CH_DB"
     )
     assert all == "leiden_res_0.03"
     assert low == "leiden_res_0.03"
@@ -186,7 +186,7 @@ def test_resolutionrecommender_column_data_orderSH():
 
 def test_resolutionrecommender_column_data_orderCH():
     all, low, medium, high = resolutionrecommender(
-        adata2.copy(), columns2, rank_method="order", test_order="CH_DB_SH"
+        adata2.copy(), columns2, rank_method="order", tests="CH_DB_SH"
     )
     assert all == "leiden_res_1.38"
     assert low == "leiden_res_0.68"
@@ -196,7 +196,7 @@ def test_resolutionrecommender_column_data_orderCH():
 
 def test_resolutionrecommender_column_data_orderDB():
     all, low, medium, high = resolutionrecommender(
-        adata2.copy(), columns2, rank_method="order", test_order="DB_CH_SH"
+        adata2.copy(), columns2, rank_method="order", tests="DB_CH_SH"
     )
     assert all == "leiden_res_0.03"
     assert low == "leiden_res_0.03"
@@ -207,6 +207,6 @@ def test_resolutionrecommender_column_data_orderDB():
 def test_resolutionrecommender_column_data_modeFail():
     with pytest.raises(Exception) as excinfo:
         resolutionrecommender(
-            adata2.copy(), columns2, rank_method="mode", test_order="DB_CH_SH"
+            adata2.copy(), columns2, rank_method="mode", tests="DB_CH_SH"
         )
     assert str(excinfo.value) == "rank_method must be: median, mean or order"

@@ -102,6 +102,8 @@ def clustering_plot(
     y_clust_med = []
     x_clust_mean = []
     y_clust_mean = []
+    x_clust_rank = []
+    y_clust_rank = []
     for c in sorted(clust):
         resolutions = clust[c]
         # When many resolutions yield the same number of clusters,
@@ -139,6 +141,19 @@ def clustering_plot(
             x_clust_mean.append(x_mean)
             y_clust_mean.append(y_mean)
 
+        # use the metrics from resolutionrecommender
+        if "opticlust" in adata.uns:
+            if len(resolutions) == 1:
+                x_rank = resolutions[0]
+            else:
+                r = [f"{method}_res_{r:.2f}" for r in resolutions]
+                r = adata.uns["opticlust"].loc[r]["rank"]
+                x_rank = float(r.sort_values().index[0].split("_")[2])
+            y_rank = c
+
+            x_clust_rank.append(x_rank)
+            y_clust_rank.append(y_rank)
+
     # plotting
     fig, ax = plt.subplots(figsize=figsize, **subplot_kwargs)
 
@@ -175,6 +190,16 @@ def clustering_plot(
         zorder=-6,
         label="median resolution",
     )
+    if "opticlust" in adata.uns:
+        ax.scatter(x_clust_rank, y_clust_rank, c="C2", alpha=1, zorder=-6)
+        ax.plot(
+            x_clust_rank,
+            y_clust_rank,
+            c="C2",
+            ls="dotted",
+            zorder=-4,
+            label="best scored resolution",
+        )
     for cx, cy in zip(x_clust_med, y_clust_med):
         ax.scatter(
             cx,
@@ -197,7 +222,12 @@ def clustering_plot(
 
     # return the median resolution per number of cluster
     cluster_resolutions = []
-    for res, n_clusters in zip(x_clust_med, y_clust_med):
+    # if "opticlust" in adata.uns:  # TODO: make this a choice
+    #     z = zip(x_clust_rank, y_clust_rank)
+    # else:
+    #     z = zip(x_clust_med, y_clust_med)
+    xy = zip(x_clust_med, y_clust_med)
+    for res, n_clusters in xy:
         if n_clusters > 1:  # a single cluster is not informative
             cluster_resolutions.append(f"{method}_res_{res:4.2f}")
 

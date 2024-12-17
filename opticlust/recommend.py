@@ -15,7 +15,7 @@ def resolutionrecommender(
     resolution_min=0.0,
     resolution_max=2.0,
     rank_method="median",
-    test_order="SH_DB_CH",
+    tests="SH_CH_DB",
     figsize=(16, 8),
     subplot_kwargs=None,
     return_plot=False,
@@ -29,8 +29,8 @@ def resolutionrecommender(
     :param resolution_min: the lowest clustering resolution
     :param resolution_max: the highest clustering resolution
     :param rank_method: combines ranked scores from tests with the options "median", "mean" or "order".
-    If "order" is selected then test_order then ranking will be fully based on the test_order parameter.
-    :param test_order: if "order" not chosen in rank_method then ranks based on these values only if ties are found.
+    If "order" is selected then the selected tests will be ranked in order.
+    :param tests: if "order" not chosen in rank_method then ranks based on these values only if ties are found.
     All possible combinations can be chosen, including: SH_CH_DB, DB_SH_CH etc. (default SH_DB_CH).
     :param figsize: matplotlib figsize
     :param subplot_kwargs: kwargs passed on to plt.subplot
@@ -49,7 +49,6 @@ def resolutionrecommender(
     plotdf = sc.get.obs_df(
         adata, keys=[*columns], obsm_keys=[("X_umap", 0), ("X_umap", 1)]
     )
-
     dim1 = plotdf["X_umap-0"].to_numpy()
     dim2 = plotdf["X_umap-1"].to_numpy()
     dims = np.concatenate((dim1.reshape(-1, 1), dim2.reshape(-1, 1)), axis=1)
@@ -57,7 +56,6 @@ def resolutionrecommender(
     sil_list = []
     cal_list = []
     dav_list = []
-
     for i in columns:
         test_res = plotdf[i].to_numpy()
         try:
@@ -72,17 +70,14 @@ def resolutionrecommender(
             dav_list.append(davies_bouldin_score(dims, test_res))
         except (ValueError, AttributeError):
             dav_list.append(np.nan)
-
-    df_metrics = pd.DataFrame(
+    df = pd.DataFrame(
         list(zip(sil_list, cal_list, dav_list)),
         columns=["SH_score", "CH_score", "DB_score"],
+        index=columns,
     )
-    df_metrics["resolutions"] = columns
-    df_metrics
 
-    df = df_metrics
-
-    # Normalize the scores with min-max scaling (0-1). DB is inverted because lower indicates better clustering.
+    # Normalize the scores with min-max scaling (0-1).
+    # DB is inverted because lower indicates better clustering.
     df["SH_score_normalized"] = (df["SH_score"] - df["SH_score"].min()) / (
         df["SH_score"].max() - df["SH_score"].min()
     )
@@ -93,127 +88,143 @@ def resolutionrecommender(
         df["DB_score"].max() - df["DB_score"].min()
     )
 
-    # Rank the test scores
-    first_score = test_order.split("_")[0]
-    second_score = test_order.split("_")[1]
-    third_score = test_order.split("_")[2]
-
-    df[f"{first_score}_rank"] = df[f"{first_score}_score_normalized"].rank(
-        ascending=False
-    )
-    df[f"{second_score}_rank"] = df[f"{second_score}_score_normalized"].rank(
-        ascending=False
-    )
-    df[f"{third_score}_rank"] = df[f"{third_score}_score_normalized"].rank(
-        ascending=False
-    )
-
-    # Combine the ranks into a median single score
-    columns = [f"{first_score}_rank", f"{second_score}_rank", f"{third_score}_rank"]
-    df_sub = df[columns]
-    print(f"Using rank_method: {rank_method}")
+    # Combine the scores
+    columns = [f"{score}_score_normalized" for score in tests.split("_")]
     if rank_method == "median":
-        combined_rank = df_sub.median(axis=1)
-        df["combined_rank"] = combined_rank
+        df["combined_score_normalized"] = df[columns].median(axis=1)
     elif rank_method == "mean":
-        combined_rank = df_sub.mean(axis=1)
-        df["combined_rank"] = combined_rank
+        # TODO: does a weighted average make sense?
+        score_weights = {"CH": 1.0, "DB": 1.0, "SH": 1.0}
+        df2 = df[columns].copy()
+        for score in tests.split("_"):
+            df2[f"{score}_score_normalized"] = (
+                df2[f"{score}_score_normalized"] * score_weights[score]
+            )
+        df["combined_score_normalized"] = df2[columns].mean(axis=1)
     elif rank_method == "order":
-        df["combined_rank"] = None
+        # TODO: scale output
+        df["combined_score_normalized"] = 0
+        for i, score in enumerate(tests.split("_")):
+            df["combined_score_normalized"] += df[f"{score}_score_normalized"] / (
+                1000**i
+            )
     else:
         raise ValueError("rank_method must be: median, mean or order")
 
-    # Show the plots with normalised scores between 0-1 for the three tests
-    fig, ax = plt.subplots(figsize=figsize, **subplot_kwargs)
-    df.plot(
-        kind="line",
-        x="resolutions",
-        y=[
-            f"{first_score}_score_normalized",
-            f"{second_score}_score_normalized",
-            f"{third_score}_score_normalized",
-        ],
-        ax=ax,
+    _plot_metrics(
+        df,
+        method_clustering,
+        figsize,
+        subplot_kwargs,
     )
 
-    ax.set_xticks(list(np.arange(df.shape[0])))
-    ax.set_xticklabels(df["resolutions"])
+    # Sort the cluster resolutions, using next score as tiebreaker
+    # First, define the metrics to sort by, and their order
+    order_tests = [f"{score}_score" for score in tests.split("_")]
+    if rank_method != "order":
+        order_tests = ["combined_score_normalized"] + order_tests
 
-    # Add labels and titles
-    ax.set_xlabel("Resolutions")
-    ax.set_ylabel("scores")
-    ax.set_title(
-        "Scaled Silhoutte (SH), Inverse Davies Bouldin (DB) and Calinski-Harabasz (CH) scores (0-1; higher is better)"
-    )
-
-    # Show the plot
-    plt.xticks(rotation=90)
-    plt.show()
-
-    # Sort the df based on th ranking with a dict:
+    # Second, determine if the sorting is ascending/descending per metric
     dict_sorting = {
-        "combined_rank": True,
-        "SH_score": False,
-        "CH_score": False,
-        "DB_score": True,
+        "combined_score_normalized": False,  # higher is better
+        "SH_score": False,  # higher is better
+        "CH_score": False,  # higher is better
+        "DB_score": True,  # lower is better
     }
-
-    # Define the order of the tests and make use of combined rank if true
-    if rank_method == "order":
-        order_tests = [
-            f"{first_score}_score",
-            f"{second_score}_score",
-            f"{third_score}_score",
-        ]
-    else:
-        order_tests = [
-            "combined_rank",
-            f"{first_score}_score",
-            f"{second_score}_score",
-            f"{third_score}_score",
-        ]
-
-    # Retrieve the true-false values of the tests in the specified order
     values_tests = [dict_sorting[key] for key in order_tests]
 
-    # Sort by combined rank, and in case of ties, use silhouette score, calinski harabasz score, and davies bouldin score
-    df_sorted = df.sort_values(
-        by=[*order_tests], ascending=[*values_tests]  # True,
-    ).reset_index(drop=True)
+    # Finally, sort and add the rank based on the sorted order
+    df_sorted = df.sort_values(by=[*order_tests], ascending=[*values_tests])
+    df_sorted["rank"] = df_sorted.reset_index().index + 1
 
-    # Add final rank based on the sorted order
-    df_sorted["final_rank"] = df_sorted.index + 1
-
-    score_columns = [
-        "resolutions",
-        f"{first_score}_score",
-        f"{second_score}_score",
-        f"{third_score}_score",
-        "final_rank",
-    ]
+    # Add the metrics to adata
+    adata.uns["opticlust"] = df_sorted.sort_index()
+    print("Metrics have been stored under adata.uns['opticlust']")
 
     # Display the sorted DataFrame with full ranking
+    score_columns = [f"{score}_score" for score in tests.split("_")] + [
+        "combined_score_normalized",
+        "rank",
+    ]
     pd.set_option("display.max_columns", None)
     pd.set_option("display.max_rows", None)
     print("\nRanked clustering resolution table displaying raw test scores:")
     print(df_sorted[score_columns])
 
+    return _recommend_resolutions(
+        df_sorted, resolution_max, resolution_min, score_columns, method_clustering
+    )
+
+
+def _plot_metrics(
+    df,
+    method_clustering,
+    figsize,
+    subplot_kwargs,
+):
+    # Show the plots with normalised scores between 0-1 for the three tests
+    fig, ax = plt.subplots(figsize=figsize, **subplot_kwargs)
+    df.plot(
+        kind="line",
+        y=[
+            "SH_score_normalized",
+            "DB_score_normalized",
+            "CH_score_normalized",
+            "combined_score_normalized",
+        ],
+        ax=ax,
+    )
+    for i in range(len(df)):
+        if i % 2 == 1:
+            ax.axvspan(i - 0.5, i + 0.5, alpha=0.5, color="lightgrey", zorder=-1)
+
+    ax.set_xticks(list(np.arange(df.shape[0])))
+    ax.set_xticklabels([x.split("_")[2] for x in df.index])
+
+    # Add labels and titles
+    plt.xticks(rotation=90)
+    ax.set_xlabel(f"{method_clustering.capitalize()} clustering resolution")
+    ax.set_ylabel("Metric scores")
+    ax.set_title(
+        f"Metric scores per {method_clustering.capitalize()} clustering resolution"
+        "\n (normalized & scaled between 0-1; higher is better)"
+    )
+
+    # Legend
+    handles, labels = ax.get_legend_handles_labels()
+    d = {
+        "SH": "Scaled Silhouette",
+        "DB": "Inverse Davies Bouldin",
+        "CH": "Calinski-Harabasz",
+    }
+    labels = [d.get(l.split("_")[0], l) for l in labels]
+    ax.legend(
+        title="Metrics",
+        handles=handles,
+        labels=labels,
+    )
+
+    # Show the plot
+    plt.show()
+
+
+def _recommend_resolutions(
+    df_sorted, resolution_max, resolution_min, score_columns, method_clustering
+):
     # Extract [res] from '[method]_res_[res]' to use for selection downstream
-    df_sorted["resolutions"] = [x.split("_")[2] for x in df_sorted["resolutions"]]
+    df_sorted["resolutions"] = [x.split("_")[2] for x in df_sorted.index]
     df_sorted["resolutions"] = df_sorted["resolutions"].astype(float)
     df_sorted = df_sorted.round(2)
 
     # Define the resolution ranges
     range_max_min = resolution_max - resolution_min
-    low_resolutions = df_sorted[
-        df_sorted["resolutions"] < round((range_max_min) / 3, 1)
-    ]
+    low_resolutions = df_sorted[df_sorted["resolutions"] < round(range_max_min / 3, 1)]
     medium_resolutions = df_sorted[
-        (df_sorted["resolutions"] >= round((range_max_min) / 3, 1))
-        & (df_sorted["resolutions"] < round((range_max_min) / (3 / 2), 1))
+        (df_sorted["resolutions"] >= round(range_max_min / 3, 1))
+        & (df_sorted["resolutions"] < round(range_max_min / (3 / 2), 1))
     ]
     high_resolutions = df_sorted[
-        df_sorted["resolutions"] >= round((range_max_min) / (3 / 2), 1)
+        df_sorted["resolutions"] >= round(range_max_min / (3 / 2), 1)
     ]
 
     # Get the top-ranked resolution for each category
@@ -226,30 +237,30 @@ def resolutionrecommender(
     print("\nTop Overall Rank:")
     print(top_overall[score_columns])
 
-    print(f"\nTop Low Clustering Resolution <{round((range_max_min)/3,1)}:")
+    print(f"\nTop Low Clustering Resolution <{round(range_max_min / 3, 1)}:")
     if top_low is not None:
         print(top_low[score_columns])
     else:
         print("No low clustering resolutions found.")
 
     print(
-        f"\nTop Medium Clustering Resolution (>={round((range_max_min)/3,1)} and {round((range_max_min)/(3/2),1)}):"
+        f"\nTop Medium Clustering Resolution (>={round(range_max_min / 3, 1)} and {round(range_max_min / (3 / 2), 1)}):"
     )
     if top_medium is not None:
         print(top_medium[score_columns])
     else:
         print("No medium clustering resolutions found.")
 
-    print(f"\nTop High Clustering Resolution (>={round((range_max_min)/(3/2),1)}):")
+    print(f"\nTop High Clustering Resolution (>={round(range_max_min / (3 / 2), 1)}):")
     if top_high is not None:
         print(top_high[score_columns])
     else:
         print("No high clustering resolutions found.")
 
     # Convert the float numbers back to original strings
-    top_overall = f"{method_clustering}_res_{top_overall["resolutions"]:.2f}"
-    top_low = f"{method_clustering}_res_{top_low["resolutions"]:.2f}"
-    top_medium = f"{method_clustering}_res_{top_medium["resolutions"]:.2f}"
-    top_high = f"{method_clustering}_res_{top_high["resolutions"]:.2f}"
+    top_overall = f"{method_clustering}_res_{top_overall['resolutions']:.2f}"
+    top_low = f"{method_clustering}_res_{top_low['resolutions']:.2f}"
+    top_medium = f"{method_clustering}_res_{top_medium['resolutions']:.2f}"
+    top_high = f"{method_clustering}_res_{top_high['resolutions']:.2f}"
 
     return top_overall, top_low, top_medium, top_high

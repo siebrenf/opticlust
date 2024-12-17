@@ -1,3 +1,4 @@
+import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 import scanpy as sc
@@ -5,9 +6,11 @@ import warnings
 
 from opticlust.clust import clustering, clustering_plot
 from opticlust.tree import clustree, clustree_plot
+from opticlust.recommend import resolutionrecommender
 
 
 # configuration
+matplotlib.use('TkAgg')
 plt.rcParams["font.family"] = "monospace"
 
 # load data (this dataset has been preprocessed already)
@@ -17,6 +20,8 @@ adata = sc.datasets.pbmc68k_reduced()
 columns = clustering(adata)
 # to select a different cluster args, e.g. flavor, use:
 # columns = clustering(adata, cluster_kwargs={"flavor":"leidenalg"})
+
+resolutionrecommender(adata, columns, tests="SH_CH_DB", rank_method="mean")
 
 # to pre-select promising clustering resolutions, use:
 tree_columns = clustering_plot(adata, columns)
