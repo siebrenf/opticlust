@@ -14,7 +14,7 @@ import pytest
 import scanpy as sc
 
 from opticlust.clust import clustering, clustering_plot
-from opticlust.recommend import resolutionrecommender
+from opticlust.recommend import recommend_resolutions, score_resolutions
 from opticlust.tree import clustree, clustree_plot
 
 matplotlib.use("agg")  # This stop images from showing and blocking pytest

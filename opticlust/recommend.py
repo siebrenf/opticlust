@@ -9,37 +9,31 @@ from sklearn.metrics import (
 )
 
 
-def resolutionrecommender(
+def score_resolutions(
     adata,
     columns,
-    resolution_min=0.0,
-    resolution_max=2.0,
-    rank_method="median",
     tests="SH_CH_DB",
+    method="median",
     figsize=(16, 8),
     subplot_kwargs=None,
     return_plot=False,
 ):
     """
-    Recommends clustering resolutions based on scores of multiple clustering related tests.
-    Silhoutte (SH), Davies Bouldin (DB) and Calinski-Harabasz (CH) scores are all calculated.
+    Score clustering resolutions based on multiple clustering metrics.
+    Silhouette (SH), Davies Bouldin (DB) and Calinski-Harabasz (CH) scores are all calculated.
+    Updates adata.uns["opticlust"] with scores per resolution.
 
-    :param adata: dataset
-    :param columns: list of adata.obs column names to use in the plot
-    :param resolution_min: the lowest clustering resolution
-    :param resolution_max: the highest clustering resolution
-    :param rank_method: combines ranked scores from tests with the options "median", "mean" or "order".
-    If "order" is selected then the selected tests will be ranked in order.
-    :param tests: if "order" not chosen in rank_method then ranks based on these values only if ties are found.
-    All possible combinations can be chosen, including: SH_CH_DB, DB_SH_CH etc. (default SH_DB_CH).
-    :param figsize: matplotlib figsize
-    :param subplot_kwargs: kwargs passed on to plt.subplot
-    :param return_plot: if True, also returns fig and ax
+    :param adata: dataset with precalculated UMAP and clusters.
+    :param columns: list of adata.obs column names to use in the plot.
+    :param tests: which metrics are included in the combined score and rank
+      (options: SH, DB, CH, underscore separated. Default: "SH_DB_CH").
+    :param method: combines scores from tests (options: "median", "mean", "order").
+    If "order" is selected the scores are ranked in order.
+    With all options, the order of parameter tests is used as tiebreaker.
+    :param figsize: matplotlib figsize.
+    :param subplot_kwargs: kwargs passed on to plt.subplot.
+    :param return_plot: if True, also returns fig and ax.
     """
-
-    if subplot_kwargs is None:
-        subplot_kwargs = {}
-
     if columns[0].count("_") != 2:
         raise ValueError("Column names must be in the shape '[method]_res_[res]'")
     method_clustering = columns[0].split("_", 1)[0]
@@ -90,9 +84,9 @@ def resolutionrecommender(
 
     # Combine the scores
     columns = [f"{score}_score_normalized" for score in tests.split("_")]
-    if rank_method == "median":
+    if method == "median":
         df["combined_score_normalized"] = df[columns].median(axis=1)
-    elif rank_method == "mean":
+    elif method == "mean":
         # TODO: does a weighted average make sense?
         score_weights = {"CH": 1.0, "DB": 1.0, "SH": 1.0}
         df2 = df[columns].copy()
@@ -101,27 +95,24 @@ def resolutionrecommender(
                 df2[f"{score}_score_normalized"] * score_weights[score]
             )
         df["combined_score_normalized"] = df2[columns].mean(axis=1)
-    elif rank_method == "order":
-        # TODO: scale output
+    elif method == "order":
+        # Add each test to the combined score,
+        #  dividing each test by a larger number to act as tiebreaker .
         df["combined_score_normalized"] = 0
         for i, score in enumerate(tests.split("_")):
             df["combined_score_normalized"] += df[f"{score}_score_normalized"] / (
                 1000**i
             )
+        # Re-scale the score
+        col = "combined_score_normalized"
+        df[col] = (df[col] - df[col].min()) / (df[col].max() - df[col].min())
     else:
-        raise ValueError("rank_method must be: median, mean or order")
+        raise ValueError("method must be: median, mean or order")
 
-    _plot_metrics(
-        df,
-        method_clustering,
-        figsize,
-        subplot_kwargs,
-    )
-
-    # Sort the cluster resolutions, using next score as tiebreaker
+    # Rank the cluster resolutions, using successive scores in param tests as tiebreaker
     # First, define the metrics to sort by, and their order
     order_tests = [f"{score}_score" for score in tests.split("_")]
-    if rank_method != "order":
+    if method != "order":
         order_tests = ["combined_score_normalized"] + order_tests
 
     # Second, determine if the sorting is ascending/descending per metric
@@ -134,55 +125,72 @@ def resolutionrecommender(
     values_tests = [dict_sorting[key] for key in order_tests]
 
     # Finally, sort and add the rank based on the sorted order
-    df_sorted = df.sort_values(by=[*order_tests], ascending=[*values_tests])
-    df_sorted["rank"] = df_sorted.reset_index().index + 1
+    df.sort_values(by=[*order_tests], ascending=[*values_tests], inplace=True)
+    df["rank"] = df.reset_index().index + 1
 
     # Add the metrics to adata
-    adata.uns["opticlust"] = df_sorted.sort_index()
-    print("Metrics have been stored under adata.uns['opticlust']")
+    adata.uns["opticlust"] = df.sort_index()
+    adata.uns["opticlust_params"] = {
+        "INFO": "This dict contains the parameters used to generate adata.uns['opticlust']",
+        "columns": columns,
+        "tests": tests,
+        "method": method,
+    }
 
-    # Display the sorted DataFrame with full ranking
-    score_columns = [f"{score}_score" for score in tests.split("_")] + [
-        "combined_score_normalized",
-        "rank",
-    ]
-    pd.set_option("display.max_columns", None)
-    pd.set_option("display.max_rows", None)
-    print("\nRanked clustering resolution table displaying raw test scores:")
-    print(df_sorted[score_columns])
-
-    return _recommend_resolutions(
-        df_sorted, resolution_max, resolution_min, score_columns, method_clustering
+    return _plot_metrics(
+        df,
+        method_clustering,
+        tests,
+        method,
+        figsize,
+        subplot_kwargs,
+        return_plot,
     )
 
 
 def _plot_metrics(
     df,
     method_clustering,
-    figsize,
-    subplot_kwargs,
+    tests,
+    method,
+    figsize=(16, 8),
+    subplot_kwargs=None,
+    return_plot=False,
 ):
+    if subplot_kwargs is None:
+        subplot_kwargs = {}
+    df.sort_index(inplace=True)
+
     # Show the plots with normalised scores between 0-1 for the three tests
     fig, ax = plt.subplots(figsize=figsize, **subplot_kwargs)
     df.plot(
         kind="line",
+        ls="-",
         y=[
             "SH_score_normalized",
             "DB_score_normalized",
             "CH_score_normalized",
-            "combined_score_normalized",
         ],
         ax=ax,
     )
+    df.plot(
+        kind="line",
+        ls="--",
+        y="combined_score_normalized",
+        ax=ax,
+    )
+
+    # Add vertical bands
     for i in range(len(df)):
         if i % 2 == 1:
             ax.axvspan(i - 0.5, i + 0.5, alpha=0.5, color="lightgrey", zorder=-1)
 
-    ax.set_xticks(list(np.arange(df.shape[0])))
-    ax.set_xticklabels([x.split("_")[2] for x in df.index])
-
     # Add labels and titles
-    plt.xticks(rotation=90)
+    ax.set_xticks(
+        ticks=list(range(df.shape[0])),
+        labels=[x.split("_")[2] for x in df.index],
+        rotation=90,
+    )
     ax.set_xlabel(f"{method_clustering.capitalize()} clustering resolution")
     ax.set_ylabel("Metric scores")
     ax.set_title(
@@ -196,6 +204,7 @@ def _plot_metrics(
         "SH": "Scaled Silhouette",
         "DB": "Inverse Davies Bouldin",
         "CH": "Calinski-Harabasz",
+        "combined": f"Combined ({tests} {method})",
     }
     labels = [d.get(l.split("_")[0], l) for l in labels]
     ax.legend(
@@ -204,42 +213,84 @@ def _plot_metrics(
         labels=labels,
     )
 
-    # Show the plot
     plt.show()
+    if return_plot:
+        return fig, ax
 
 
-def _recommend_resolutions(
-    df_sorted, resolution_max, resolution_min, score_columns, method_clustering
+def recommend_resolutions(
+    adata,
+    columns=None,
+    resolution_min=None,
+    resolution_max=None,
 ):
+    """
+    Recommends clustering resolutions based on scores of multiple clustering related tests.
+    Silhouette (SH), Davies Bouldin (DB) and Calinski-Harabasz (CH) scores are all calculated.
+
+    :param adata: dataset
+    :param columns: the columns to recommend from.
+    :param resolution_min: the lowest clustering resolution.
+    :param resolution_max: the highest clustering resolution.
+    """
+    tests = adata.uns["opticlust_params"]["tests"]
+    score_columns = [f"{score}_score" for score in tests.split("_")] + [
+        "rank",
+    ]
+    df = adata.uns["opticlust"][score_columns].copy()
+    if columns is None:
+        columns = df.index.to_list()
+    else:
+        if len(set(columns)) != len(set(columns) & set(df.index)):
+            raise IndexError(
+                "Not all given columns found. Please run score_resolutions() with these columns!"
+            )
+        df = df.loc[list(set(columns))]
+    df.sort_values("rank", inplace=True)
+
+    method_clustering = columns[0].split("_", 1)[0]
+    if method_clustering not in ["leiden", "louvain"]:
+        raise ValueError("Column names must be in the shape '[method]_res_[res]'")
+
+    # Display the sorted DataFrame with full ranking
+    pd.set_option("display.max_columns", None)
+    pd.set_option("display.max_rows", None)
+    print("\nRanked clustering resolution table displaying raw test scores:")
+    print(df)
+
+    # Separate the resolution into 3 bins, and return the top resolution of each.
+
     # Extract [res] from '[method]_res_[res]' to use for selection downstream
-    df_sorted["resolutions"] = [x.split("_")[2] for x in df_sorted.index]
-    df_sorted["resolutions"] = df_sorted["resolutions"].astype(float)
-    df_sorted = df_sorted.round(2)
+    df["resolutions"] = [x.split("_")[2] for x in df.index]
+    df["resolutions"] = df["resolutions"].astype(float)
+    df = df.round(2).dropna()
 
     # Define the resolution ranges
+    if resolution_max is None:
+        resolution_max = df["resolutions"].max()
+    if resolution_min is None:
+        resolution_min = df["resolutions"].min()
     range_max_min = resolution_max - resolution_min
-    low_resolutions = df_sorted[df_sorted["resolutions"] < round(range_max_min / 3, 1)]
-    medium_resolutions = df_sorted[
-        (df_sorted["resolutions"] >= round(range_max_min / 3, 1))
-        & (df_sorted["resolutions"] < round(range_max_min / (3 / 2), 1))
+    low_resolutions = df[df["resolutions"] < round(range_max_min / 3, 1)]
+    medium_resolutions = df[
+        (df["resolutions"] >= round(range_max_min / 3, 1))
+        & (df["resolutions"] < round(range_max_min / (3 / 2), 1))
     ]
-    high_resolutions = df_sorted[
-        df_sorted["resolutions"] >= round(range_max_min / (3 / 2), 1)
-    ]
+    high_resolutions = df[df["resolutions"] >= round(range_max_min / (3 / 2), 1)]
 
     # Get the top-ranked resolution for each category
-    top_overall = df_sorted.iloc[0]
+    top_overall = df.iloc[0]
     top_low = low_resolutions.iloc[0] if not low_resolutions.empty else None
     top_medium = medium_resolutions.iloc[0] if not medium_resolutions.empty else None
     top_high = high_resolutions.iloc[0] if not high_resolutions.empty else None
 
     # Print the results
     print("\nTop Overall Rank:")
-    print(top_overall[score_columns])
+    print(top_overall)
 
     print(f"\nTop Low Clustering Resolution <{round(range_max_min / 3, 1)}:")
     if top_low is not None:
-        print(top_low[score_columns])
+        print(top_low)
     else:
         print("No low clustering resolutions found.")
 
@@ -247,13 +298,13 @@ def _recommend_resolutions(
         f"\nTop Medium Clustering Resolution (>={round(range_max_min / 3, 1)} and {round(range_max_min / (3 / 2), 1)}):"
     )
     if top_medium is not None:
-        print(top_medium[score_columns])
+        print(top_medium)
     else:
         print("No medium clustering resolutions found.")
 
     print(f"\nTop High Clustering Resolution (>={round(range_max_min / (3 / 2), 1)}):")
     if top_high is not None:
-        print(top_high[score_columns])
+        print(top_high)
     else:
         print("No high clustering resolutions found.")
 

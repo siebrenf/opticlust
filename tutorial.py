@@ -6,7 +6,7 @@ import warnings
 
 from opticlust.clust import clustering, clustering_plot
 from opticlust.tree import clustree, clustree_plot
-from opticlust.recommend import resolutionrecommender
+from opticlust.recommend import score_resolutions, recommend_resolutions
 
 
 # configuration
@@ -21,11 +21,15 @@ columns = clustering(adata)
 # to select a different cluster args, e.g. flavor, use:
 # columns = clustering(adata, cluster_kwargs={"flavor":"leidenalg"})
 
-resolutionrecommender(adata, columns, tests="SH_CH_DB", rank_method="mean")
+# score each resolution (updates adata.uns["opticlust"])
+score_resolutions(adata, columns, tests="SH_CH_DB", method="mean")
 
 # to pre-select promising clustering resolutions, use:
-tree_columns = clustering_plot(adata, columns)
+tree_columns = clustering_plot(adata, columns, method="score", min_n_resolutions=1)
 # otherwise, use "columns" instead of "tree_columns" in code below
+
+# divide the resolution into 3 bins and print the best resolution per bin
+recommend_resolutions(adata, tree_columns)
 
 # build tree & plotting (updates adata.obs)
 tree_data = clustree(adata, tree_columns, rename_cluster=True)

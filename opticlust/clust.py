@@ -50,6 +50,7 @@ def clustering(
 def clustering_plot(
     adata,
     columns,
+    method="middle",
     min_n_resolutions=1,
     window_size=5,
     figsize=(16, 8),
@@ -63,6 +64,7 @@ def clustering_plot(
     :param adata: dataset
     :param columns: list of adata.obs column names to use in the plot.
     Column names must be in the shape "[method]_res_[res]".
+    :param method: resolution selection method (options: "mean", "median", "middle", "score").
     :param min_n_resolutions: filters the list of representative cluster resolutions
      by a minimum number of resolutions yielding the same number of clusters.
     :param window_size: width of the moving window.
@@ -79,9 +81,12 @@ def clustering_plot(
     lc = len(columns)
     if columns[0].count("_") != 2:
         raise ValueError("Column names must be in the shape '[method]_res_[res]'")
-    method = columns[0].split("_", 1)[0]
-    if method not in ["leiden", "louvain"]:
+    method_clustering = columns[0].split("_", 1)[0]
+    if method_clustering not in ["leiden", "louvain"]:
         raise ValueError("Column names must be in the shape '[method]_res_[res]'")
+
+    if method == "score" and "opticlust" not in adata.uns:
+        raise ValueError("Please run score_resolutions() first!")
 
     try:
         x = sorted([float(c.rsplit("_", 1)[1]) for c in columns])
@@ -104,55 +109,65 @@ def clustering_plot(
     y_clust_mean = []
     x_clust_rank = []
     y_clust_rank = []
+    x_clust_island = []
+    y_clust_island = []
     for c in sorted(clust):
         resolutions = clust[c]
         # When many resolutions yield the same number of clusters,
         # this can be considered a "stable" clustering.
         # To reduce downstream analysis complexity, we can filter out
         # any "unstable" clustering.
-        if x_clust_med and len(resolutions) < min_n_resolutions:
+        if len(resolutions) < min_n_resolutions:  # x_clust_med and
             continue
 
         x_med = nearest(np.median(resolutions), resolutions)
         y_med = c
-        if x_clust_med and x_med < x_clust_med[-1]:
-            # We expect the cluster resolution to increase with number of clusters.
-            # If this does not happen, skip the resolution with on the smallest
-            # sample size.
-            if len(resolutions) > len(clust[y_clust_med[-1]]):
-                x_clust_med[-1] = x_med  # skip the previous resolution
-                y_clust_med[-1] = y_med
-            else:
-                pass  # skip this resolution
-        else:
-            x_clust_med.append(x_med)
-            y_clust_med.append(y_med)
+        x_clust_med.append(x_med)
+        y_clust_med.append(y_med)
+        # if x_clust_med and x_med < x_clust_med[-1]:
+        #     # We expect the cluster resolution to increase with number of clusters.
+        #     # If this does not happen, skip the resolution with on the smallest
+        #     # sample size.
+        #     if len(resolutions) > len(clust[y_clust_med[-1]]):
+        #         x_clust_med[-1] = x_med  # skip the previous resolution
+        #         y_clust_med[-1] = y_med
+        #     else:
+        #         pass  # skip this resolution
+        # else:
+        #     x_clust_med.append(x_med)
+        #     y_clust_med.append(y_med)
 
         x_mean = nearest(np.mean(resolutions), resolutions)
         y_mean = c
-        if x_clust_mean and x_mean < x_clust_mean[-1]:
-            # see above for explanation
-            if len(resolutions) > len(clust[y_clust_mean[-1]]):
-                x_clust_mean[-1] = x_mean  # skip the previous resolution
-                y_clust_mean[-1] = y_mean
-            else:
-                pass  # skip this resolution
-        else:
-            x_clust_mean.append(x_mean)
-            y_clust_mean.append(y_mean)
+        x_clust_mean.append(x_mean)
+        y_clust_mean.append(y_mean)
+        # if x_clust_mean and x_mean < x_clust_mean[-1]:
+        #     # see above for explanation
+        #     if len(resolutions) > len(clust[y_clust_mean[-1]]):
+        #         x_clust_mean[-1] = x_mean  # skip the previous resolution
+        #         y_clust_mean[-1] = y_mean
+        #     else:
+        #         pass  # skip this resolution
+        # else:
+        #     x_clust_mean.append(x_mean)
+        #     y_clust_mean.append(y_mean)
 
-        # use the metrics from resolutionrecommender
+        # use the metrics from score_resolutions() to select
+        #  the top scoring resolution per n clusters
         if "opticlust" in adata.uns:
-            if len(resolutions) == 1:
-                x_rank = resolutions[0]
-            else:
-                r = [f"{method}_res_{r:.2f}" for r in resolutions]
-                r = adata.uns["opticlust"].loc[r]["rank"]
-                x_rank = float(r.sort_values().index[0].split("_")[2])
+            res = [f"{method_clustering}_res_{r:.2f}" for r in resolutions]
+            res = adata.uns["opticlust"].loc[res]["rank"].sort_values().index[0]
+            x_rank = float(res.split("_")[2])
             y_rank = c
-
             x_clust_rank.append(x_rank)
             y_clust_rank.append(y_rank)
+
+        # use the middle resolution from the longest consecutive sequence of resolutions
+        n, res = longest_consecutive_subsequence(x, resolutions)
+        x_island = nearest(np.median(res), res)
+        y_island = c
+        x_clust_island.append(x_island)
+        y_clust_island.append(y_island)
 
     # plotting
     fig, ax = plt.subplots(figsize=figsize, **subplot_kwargs)
@@ -178,17 +193,27 @@ def clustering_plot(
     ax.plot(
         x_clust_mean,
         y_clust_mean,
-        c="C1",
+        c="C0",
         ls="--",
         zorder=-5,
         label="mean resolution",
     )
+    ax.scatter(x_clust_med, y_clust_med, c="C0", alpha=1, zorder=-6)
     ax.plot(
         x_clust_med,
         y_clust_med,
-        c="C0",
+        c="C1",
+        ls="dotted",
         zorder=-6,
         label="median resolution",
+    )
+    ax.scatter(x_clust_island, y_clust_island, c="C3", alpha=1, zorder=-6)
+    ax.plot(
+        x_clust_island,
+        y_clust_island,
+        c="C3",
+        zorder=-6,
+        label="middle resolution\n (longest consecutive sequence)",
     )
     if "opticlust" in adata.uns:
         ax.scatter(x_clust_rank, y_clust_rank, c="C2", alpha=1, zorder=-6)
@@ -198,22 +223,38 @@ def clustering_plot(
             c="C2",
             ls="dotted",
             zorder=-4,
-            label="best scored resolution",
+            label="best scoring resolution",
         )
-    for cx, cy in zip(x_clust_med, y_clust_med):
+
+    # add the selected resolutions to the legend
+    if method == "score":
+        xy = zip(x_clust_rank, y_clust_rank)
+        color = "C2"
+    elif method == "mean":
+        xy = zip(x_clust_mean, y_clust_mean)
+        color = "C0"
+    elif method == "median":
+        xy = zip(x_clust_med, y_clust_med)
+        color = "C1"
+    elif method == "middle":
+        xy = zip(x_clust_island, y_clust_island)
+        color = "C3"
+    else:
+        raise ValueError("method must be 'mean', 'median', 'middle', 'score'!")
+    for cx, cy in xy:
         ax.scatter(
             cx,
             cy,
-            c="C0",
-            zorder=-7,
+            c=color,
+            zorder=-10,
             label=f"n={cy: >2} res={cx:4.2f}",
         )
 
     ax.grid(which="major")
     ax.set_title(
-        f"Number of clusters over {lc} {method.capitalize()} clustering resolutions"
+        f"Number of clusters over {lc} {method_clustering.capitalize()} clustering resolutions"
     )
-    ax.set_xlabel(f"{method.capitalize()} clustering resolution")
+    ax.set_xlabel(f"{method_clustering.capitalize()} clustering resolution")
     ax.set_ylabel("Number of clusters")
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc="center left", bbox_to_anchor=(1, 0.5))
@@ -222,14 +263,19 @@ def clustering_plot(
 
     # return the median resolution per number of cluster
     cluster_resolutions = []
-    # if "opticlust" in adata.uns:  # TODO: make this a choice
-    #     z = zip(x_clust_rank, y_clust_rank)
-    # else:
-    #     z = zip(x_clust_med, y_clust_med)
-    xy = zip(x_clust_med, y_clust_med)
+    if method == "score":
+        xy = zip(x_clust_rank, y_clust_rank)
+    elif method == "mean":
+        xy = zip(x_clust_mean, y_clust_mean)
+    elif method == "median":
+        xy = zip(x_clust_med, y_clust_med)
+    elif method == "middle":
+        xy = zip(x_clust_island, y_clust_island)
+    else:
+        raise ValueError("method must be 'mean', 'median' or 'score'!")
     for res, n_clusters in xy:
         if n_clusters > 1:  # a single cluster is not informative
-            cluster_resolutions.append(f"{method}_res_{res:4.2f}")
+            cluster_resolutions.append(f"{method_clustering}_res_{res:4.2f}")
 
     if return_plot:
         return cluster_resolutions, fig, ax
@@ -249,3 +295,29 @@ def nearest(val, vals):
         if diff < best[1]:
             best = i, diff
     return vals[best[0]]
+
+
+def longest_consecutive_subsequence(list1, list2):
+    max_length = 0
+    longest_subsequence = []
+    # Iterate through list2
+    for i in range(len(list2)):
+        # Find the starting index of list2[i] in list1
+        idx1 = list1.index(list2[i])
+        current_length = 0
+        current_subsequence = []
+        # Try to match consecutive elements from list2 starting from list2[i]
+        for j in range(i, len(list2)):
+            # Check if list2[j] is the next consecutive element in list1
+            if idx1 + (j - i) < len(list1) and list1[idx1 + (j - i)] == list2[j]:
+                current_length += 1
+                current_subsequence.append(list2[j])
+            else:
+                break
+
+        # Update max length and subsequence if we found a longer one
+        if current_length > max_length:
+            max_length = current_length
+            longest_subsequence = current_subsequence
+
+    return max_length, longest_subsequence
