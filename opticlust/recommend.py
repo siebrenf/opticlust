@@ -206,7 +206,7 @@ def _plot_metrics(
         "CH": "Calinski-Harabasz",
         "combined": f"Combined ({tests} {method})",
     }
-    labels = [d.get(l.split("_")[0], l) for l in labels]
+    labels = [d.get(lbl.split("_")[0], lbl) for lbl in labels]
     ax.legend(
         title="Metrics",
         handles=handles,
