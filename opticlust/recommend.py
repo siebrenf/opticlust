@@ -13,7 +13,7 @@ def score_resolutions(
     adata,
     columns,
     tests="SH_CH_DB",
-    method="median",
+    method="mean",
     figsize=(16, 8),
     subplot_kwargs=None,
     return_plot=False,
