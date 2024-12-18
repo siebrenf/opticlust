@@ -16,3 +16,4 @@ dependencies:
   - black
   - isort
   - pytest
+  - ruff

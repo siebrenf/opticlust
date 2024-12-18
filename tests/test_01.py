@@ -61,6 +61,12 @@ def test_black_lint():
         shell=True,
     )
 
+    sp.check_output(
+        "ruff check --line-length 88 --extend-select C4,SIM,TCH,E4,E7,E9,F --ignore E402 "
+        + f"{join(base, 'opticlust')} {join(base, 'tests')}",
+        shell=True,
+    )
+
 
 def test_load_data_positive(adata_clean):
     assert isinstance(adata_clean.obs, pd.DataFrame)
@@ -83,10 +89,10 @@ def test_clustering_fail():
 def test_score_resolutions_2_mean(adata_clean, columns):
     adata = adata_clean.copy()
     score_resolutions(adata, columns[0:5], tests="CH_SH", method="mean")
-    assert "opticlust" not in adata_clean.uns.keys()
-    assert "opticlust_params" not in adata_clean.uns.keys()
-    assert "opticlust" in adata.uns.keys()
-    assert "opticlust_params" in adata.uns.keys()
+    assert "opticlust" not in adata_clean.uns
+    assert "opticlust_params" not in adata_clean.uns
+    assert "opticlust" in adata.uns
+    assert "opticlust_params" in adata.uns
     assert adata.uns["opticlust_params"]["tests"] == "CH_SH"
     assert adata.uns["opticlust_params"]["method"] == "mean"
 
@@ -94,10 +100,10 @@ def test_score_resolutions_2_mean(adata_clean, columns):
 def test_score_resolutions_all_median(adata_clean, columns):
     adata = adata_clean.copy()
     score_resolutions(adata, columns[0:5], tests="SH_DB_CH", method="median")
-    assert "opticlust" not in adata_clean.uns.keys()
-    assert "opticlust_params" not in adata_clean.uns.keys()
-    assert "opticlust" in adata.uns.keys()
-    assert "opticlust_params" in adata.uns.keys()
+    assert "opticlust" not in adata_clean.uns
+    assert "opticlust_params" not in adata_clean.uns
+    assert "opticlust" in adata.uns
+    assert "opticlust_params" in adata.uns
     assert adata.uns["opticlust_params"]["tests"] == "SH_DB_CH"
     assert adata.uns["opticlust_params"]["method"] == "median"
 
@@ -105,10 +111,10 @@ def test_score_resolutions_all_median(adata_clean, columns):
 def test_score_resolutions_2_order(adata_clean, columns):
     adata = adata_clean.copy()
     score_resolutions(adata, columns[0:5], tests="DB_SH", method="order")
-    assert "opticlust" not in adata_clean.uns.keys()
-    assert "opticlust_params" not in adata_clean.uns.keys()
-    assert "opticlust" in adata.uns.keys()
-    assert "opticlust_params" in adata.uns.keys()
+    assert "opticlust" not in adata_clean.uns
+    assert "opticlust_params" not in adata_clean.uns
+    assert "opticlust" in adata.uns
+    assert "opticlust_params" in adata.uns
     assert adata.uns["opticlust_params"]["tests"] == "DB_SH"
     assert adata.uns["opticlust_params"]["method"] == "order"
 
