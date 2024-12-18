@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import scanpy as sc
+from natsort import natsort_keygen, natsorted
 from sklearn.metrics import (
     calinski_harabasz_score,
     davies_bouldin_score,
@@ -34,6 +35,7 @@ def score_resolutions(
     :param subplot_kwargs: kwargs passed on to plt.subplot.
     :param return_plot: if True, also returns fig and ax.
     """
+    columns = natsorted(columns)
     if columns[0].count("_") != 2:
         raise ValueError("Column names must be in the shape '[method]_res_[res]'")
     method_clustering = columns[0].split("_", 1)[0]
@@ -129,7 +131,7 @@ def score_resolutions(
     df["rank"] = df.reset_index().index + 1
 
     # Add the metrics to adata
-    adata.uns["opticlust"] = df.sort_index()
+    adata.uns["opticlust"] = df.sort_index(key=natsort_keygen())
     adata.uns["opticlust_params"] = {
         "INFO": "This dict contains the parameters used to generate adata.uns['opticlust']",
         "columns": columns,
@@ -191,6 +193,7 @@ def _plot_metrics(
         labels=[x.split("_")[2] for x in df.index],
         rotation=90,
     )
+    ax.set_xlim(-0.5, len(df) - 0.5)
     ax.set_xlabel(f"{method_clustering.capitalize()} clustering resolution")
     ax.set_ylabel("Metric scores")
     ax.set_title(
@@ -213,6 +216,7 @@ def _plot_metrics(
         labels=labels,
     )
 
+    plt.tight_layout()
     plt.show()
     if return_plot:
         return fig, ax

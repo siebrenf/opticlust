@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import scanpy as sc
+from natsort import natsorted
 
 
 def clustering(
@@ -79,6 +80,7 @@ def clustering_plot(
         subplot_kwargs = {}
     n = window_size
     lc = len(columns)
+    columns = natsorted(columns)
     if columns[0].count("_") != 2:
         raise ValueError("Column names must be in the shape '[method]_res_[res]'")
     method_clustering = columns[0].split("_", 1)[0]
@@ -109,8 +111,8 @@ def clustering_plot(
     y_clust_mean = []
     x_clust_rank = []
     y_clust_rank = []
-    x_clust_island = []
-    y_clust_island = []
+    x_clust_mid = []
+    y_clust_mid = []
     for c in sorted(clust):
         resolutions = clust[c]
         # When many resolutions yield the same number of clusters,
@@ -164,10 +166,10 @@ def clustering_plot(
 
         # use the middle resolution from the longest consecutive sequence of resolutions
         n, res = longest_consecutive_subsequence(x, resolutions)
-        x_island = nearest(np.median(res), res)
-        y_island = c
-        x_clust_island.append(x_island)
-        y_clust_island.append(y_island)
+        x_mid = nearest(np.median(res), res)
+        y_mid = c
+        x_clust_mid.append(x_mid)
+        y_clust_mid.append(y_mid)
 
     # plotting
     fig, ax = plt.subplots(figsize=figsize, **subplot_kwargs)
@@ -207,10 +209,10 @@ def clustering_plot(
         zorder=-6,
         label="median resolution",
     )
-    ax.scatter(x_clust_island, y_clust_island, c="C3", alpha=1, zorder=-6)
+    ax.scatter(x_clust_mid, y_clust_mid, c="C3", alpha=1, zorder=-6)
     ax.plot(
-        x_clust_island,
-        y_clust_island,
+        x_clust_mid,
+        y_clust_mid,
         c="C3",
         zorder=-6,
         label="middle resolution\n (longest consecutive sequence)",
@@ -237,7 +239,7 @@ def clustering_plot(
         xy = zip(x_clust_med, y_clust_med)
         color = "C1"
     elif method == "middle":
-        xy = zip(x_clust_island, y_clust_island)
+        xy = zip(x_clust_mid, y_clust_mid)
         color = "C3"
     else:
         raise ValueError("method must be 'mean', 'median', 'middle', 'score'!")
@@ -259,6 +261,7 @@ def clustering_plot(
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc="center left", bbox_to_anchor=(1, 0.5))
     fig.subplots_adjust(right=0.7)
+    plt.tight_layout()
     plt.show()
 
     # return the median resolution per number of cluster
@@ -270,7 +273,7 @@ def clustering_plot(
     elif method == "median":
         xy = zip(x_clust_med, y_clust_med)
     elif method == "middle":
-        xy = zip(x_clust_island, y_clust_island)
+        xy = zip(x_clust_mid, y_clust_mid)
     else:
         raise ValueError("method must be 'mean', 'median' or 'score'!")
     for res, n_clusters in xy:
