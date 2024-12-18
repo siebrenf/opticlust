@@ -24,10 +24,10 @@ def clustree(adata, columns, rename_cluster=True, cluster2color=None, colors=Non
     :param colors: optional list of colors (default: scanpy defaults)
     :return: plot_data: a dictionary used in clustree_plot
     """
-    columns = natsorted(columns)
     n_clusters = 0
     n_resolutions = len(columns)
     column = None  # column with the highest number of clusters
+    clusters_per_column = {}
     for c in columns:
         if c not in adata.obs:
             raise ValueError(f"columns not found in adata.obs: '{c}'")
@@ -35,7 +35,13 @@ def clustree(adata, columns, rename_cluster=True, cluster2color=None, colors=Non
         if n > n_clusters:
             n_clusters = n
             column = c
+        clusters_per_column.setdefault(n, []).append(c)
     n_cells = len(adata.obs)
+
+    # sort resolutions in order of clusters
+    columns = []
+    for c in sorted(clusters_per_column):
+        columns.extend(clusters_per_column[c])
 
     g = nx.DiGraph()
     y_ticks = []  # plot label
