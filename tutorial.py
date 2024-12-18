@@ -1,16 +1,16 @@
+import warnings
+
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 import scanpy as sc
-import warnings
 
 from opticlust.clust import clustering, clustering_plot
+from opticlust.recommend import recommend_resolutions, score_resolutions
 from opticlust.tree import clustree, clustree_plot
-from opticlust.recommend import score_resolutions, recommend_resolutions
-
 
 # configuration
-matplotlib.use('TkAgg')
+matplotlib.use("TkAgg")
 plt.rcParams["font.family"] = "monospace"
 
 # load data (this dataset has been preprocessed already)
@@ -39,7 +39,7 @@ clustree_plot(tree_data)
 sc.pl.umap(adata, color=tree_columns, legend_loc="on data", alpha=0.75, ncols=3)
 
 # plot the top genes per cluster for each resolution
-warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 for column in [top_low, top_medium, top_high]:
     sc.tl.rank_genes_groups(adata, column, n_genes=5)
     sc.tl.dendrogram(adata, column)

@@ -52,18 +52,19 @@ def tree_data(adata_clean, tree_columns):
 def test_black_lint():
     base = dirname(dirname(__file__))
     sp.check_output(
-        "black " + f"{join(base, 'opticlust')} {join(base, 'tests')}",
+        "black "
+        + f"{join(base, 'opticlust')} {join(base, 'tests')} {join(base, 'tutorial.py')}",
         shell=True,
     )
     sp.check_output(
         "isort --overwrite-in-place --profile black --conda-env requirements.yaml "
-        + f"{join(base, 'opticlust')} {join(base, 'tests')}",
+        + f"{join(base, 'opticlust')} {join(base, 'tests')} {join(base, 'tutorial.py')}",
         shell=True,
     )
 
     sp.check_output(
         "ruff check --line-length 88 --extend-select C4,SIM,TCH,E4,E7,E9,F --ignore E402 "
-        + f"{join(base, 'opticlust')} {join(base, 'tests')}",
+        + f"{join(base, 'opticlust')} {join(base, 'tests')} {join(base, 'tutorial.py')}",
         shell=True,
     )
 
