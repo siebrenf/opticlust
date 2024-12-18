@@ -96,5 +96,7 @@ This tool was inspired by:
 - The original [Clustree](https://github.com/lazappi/clustree) R package.
 - This [BioStars post](https://www.biostars.org/p/9489313/#9489342) by firestar.
 
+
 # How to cite
-When using this software package, please correctly cite the accompanied DOI under "Citation": https://doi.org/10.5281/zenodo.14513541
+
+When using this software package, please cite the accompanied DOI under "Citation" at https://doi.org/10.5281/zenodo.14513541
