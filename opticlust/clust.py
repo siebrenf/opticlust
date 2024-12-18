@@ -165,7 +165,7 @@ def clustering_plot(
             y_clust_rank.append(y_rank)
 
         # use the middle resolution from the longest consecutive sequence of resolutions
-        n, res = longest_consecutive_subsequence(x, resolutions)
+        res = longest_consecutive_subsequence(x, resolutions)[1]
         x_mid = nearest(np.median(res), res)
         y_mid = c
         x_clust_mid.append(x_mid)
