@@ -1,11 +1,12 @@
 # opticlust
 
 [![CI/CD](https://github.com/siebrenf/opticlust/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/siebrenf/opticlust/actions/actions/workflows/ci-cd.yml)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![PyPI version](https://badge.fury.io/py/opticlust.svg)](https://badge.fury.io/py/opticlust)
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/opticlust/README.html)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/opticlust/badges/version.svg)](https://anaconda.org/bioconda/opticlust)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/opticlust/badges/downloads.svg)](https://anaconda.org/bioconda/opticlust)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14513541.svg)](https://doi.org/10.5281/zenodo.14513541)
 
 Single cell clustering and recommendations at a glance. 
 Identify which clustering resolution(s) fit your data within minutes.
@@ -94,3 +95,8 @@ This makes it difficult to track how changes in resolution impacted the clusteri
 This tool was inspired by:
 - The original [Clustree](https://github.com/lazappi/clustree) R package.
 - This [BioStars post](https://www.biostars.org/p/9489313/#9489342) by firestar.
+
+
+# How to cite
+
+When using this software package, please cite the accompanied DOI under "Citation" at https://doi.org/10.5281/zenodo.14513541
