@@ -1,11 +1,12 @@
 # opticlust
 
 [![CI/CD](https://github.com/siebrenf/opticlust/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/siebrenf/opticlust/actions/actions/workflows/ci-cd.yml)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![PyPI version](https://badge.fury.io/py/opticlust.svg)](https://badge.fury.io/py/opticlust)
 [![install with bioconda](https://img.shields.io/badge/install%20with-bioconda-brightgreen.svg?style=flat)](http://bioconda.github.io/recipes/opticlust/README.html)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/opticlust/badges/version.svg)](https://anaconda.org/bioconda/opticlust)
 [![Anaconda-Server Badge](https://anaconda.org/bioconda/opticlust/badges/downloads.svg)](https://anaconda.org/bioconda/opticlust)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.14513541.svg)](https://doi.org/10.5281/zenodo.14513541)
 
 Single cell clustering and recommendations at a glance. 
 Identify which clustering resolution(s) fit your data within minutes.
