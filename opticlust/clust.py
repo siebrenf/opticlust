@@ -23,8 +23,8 @@ def clustering(
     :param cluster_kwargs: kwargs passed on the cluster function
     :return: columns: list of column names generated in adata.obs
     """
-    if "pca" not in adata.uns:
-        raise RuntimeError("A PCA is required!")
+    # if "pca" not in adata.uns:
+    #     raise RuntimeError("A PCA is required!")
     if cluster_kwargs is None:
         cluster_kwargs = {}
         if method == "leiden":
