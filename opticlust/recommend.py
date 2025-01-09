@@ -8,6 +8,7 @@ from sklearn.metrics import (
     davies_bouldin_score,
     silhouette_score,
 )
+from tqdm import tqdm
 
 
 def score_resolutions(
@@ -52,7 +53,7 @@ def score_resolutions(
     sil_list = []
     cal_list = []
     dav_list = []
-    for i in columns:
+    for i in tqdm(sorted(columns)):
         test_res = plotdf[i].to_numpy()
         try:
             sil_list.append(silhouette_score(dims, test_res))
@@ -66,6 +67,7 @@ def score_resolutions(
             dav_list.append(davies_bouldin_score(dims, test_res))
         except (ValueError, AttributeError):
             dav_list.append(np.nan)
+        pass
     df = pd.DataFrame(
         list(zip(sil_list, cal_list, dav_list)),
         columns=["SH_score", "CH_score", "DB_score"],
