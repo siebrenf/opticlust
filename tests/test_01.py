@@ -81,12 +81,6 @@ def test_clustering_positive(adata_clean):
     assert len(columns) == 81
 
 
-#def test_clustering_fail():
-#    with pytest.raises(AttributeError) as excinfo:
-#        clustering(None)
-#    assert str(excinfo.value) == "'NoneType' object has no attribute 'uns'"
-
-
 def test_score_resolutions_2_mean(adata_clean, columns):
     adata = adata_clean.copy()
     score_resolutions(adata, columns[0:5], tests="CH_SH", method="mean")
@@ -118,6 +112,14 @@ def test_score_resolutions_2_order(adata_clean, columns):
     assert "opticlust_params" in adata.uns
     assert adata.uns["opticlust_params"]["tests"] == "DB_SH"
     assert adata.uns["opticlust_params"]["method"] == "order"
+
+
+def test_score_resolutions_subset(adata_clean, columns):
+    adata = adata_clean.copy()
+    # no subset
+    score_resolutions(adata, columns[0:2], max_n_silhouette=-1)
+    # subset
+    score_resolutions(adata, columns[0:2], max_n_silhouette=1)
 
 
 def test_clusteringplot_middle(adata_clean, columns):

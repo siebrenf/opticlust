@@ -20,6 +20,7 @@ dependencies = [
     "numpy>=1.23",
     "scanpy>=1.10",
     "scikit-learn>=1.1",
+    "tqdm",
 ]
 
 dynamic = ["version"]
