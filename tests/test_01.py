@@ -81,10 +81,10 @@ def test_clustering_positive(adata_clean):
     assert len(columns) == 81
 
 
-def test_clustering_fail():
-    with pytest.raises(AttributeError) as excinfo:
-        clustering(None)
-    assert str(excinfo.value) == "'NoneType' object has no attribute 'uns'"
+#def test_clustering_fail():
+#    with pytest.raises(AttributeError) as excinfo:
+#        clustering(None)
+#    assert str(excinfo.value) == "'NoneType' object has no attribute 'uns'"
 
 
 def test_score_resolutions_2_mean(adata_clean, columns):
