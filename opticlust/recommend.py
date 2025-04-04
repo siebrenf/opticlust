@@ -33,11 +33,13 @@ def score_resolutions(
     :param method: combines scores from tests (options: "median", "mean", "order").
     If "order" is selected the scores are ranked in order.
     With all options, the order of parameter tests is used as tiebreaker.
-    :param max_n_silhouette: subset cells for the Silhouette score to this number.
+    :param max_n_silhouette: subset cells for the Silhouette score to this number. Use -1 for all cells.
     :param figsize: matplotlib figsize.
     :param subplot_kwargs: kwargs passed on to plt.subplot.
     :param return_plot: if True, also returns fig and ax.
     """
+    use_subset = max_n_silhouette != -1 and len(adata.obs) > max_n_silhouette
+
     columns = natsorted(columns)
     if columns[0].count("_") != 2:
         raise ValueError("Column names must be in the shape '[method]_res_[res]'")
@@ -48,6 +50,8 @@ def score_resolutions(
     plotdf = sc.get.obs_df(
         adata, keys=[*columns], obsm_keys=[("X_umap", 0), ("X_umap", 1)]
     )
+    if use_subset:
+        plotdf_subset = plotdf.sample(max_n_silhouette, random_state=42)
     dim1 = plotdf["X_umap-0"].to_numpy()
     dim2 = plotdf["X_umap-1"].to_numpy()
     dims = np.concatenate((dim1.reshape(-1, 1), dim2.reshape(-1, 1)), axis=1)
@@ -57,10 +61,8 @@ def score_resolutions(
     dav_list = []
     for i in tqdm(columns):
         test_res = plotdf[i].to_numpy()
-        test_res2 = test_res
-        if len(test_res) > max_n_silhouette:
-            test_res2 = test_res.sample(max_n_silhouette, random_state=42)
         try:
+            test_res2 = plotdf_subset[i].to_numpy() if use_subset else test_res
             sil_list.append(silhouette_score(dims, test_res2))
         except (ValueError, AttributeError):
             sil_list.append(np.nan)
