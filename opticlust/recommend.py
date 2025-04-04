@@ -16,6 +16,7 @@ def score_resolutions(
     columns,
     tests="SH_CH_DB",
     method="mean",
+    max_n_silhouette=50_000,
     figsize=(16, 8),
     subplot_kwargs=None,
     return_plot=False,
@@ -32,6 +33,7 @@ def score_resolutions(
     :param method: combines scores from tests (options: "median", "mean", "order").
     If "order" is selected the scores are ranked in order.
     With all options, the order of parameter tests is used as tiebreaker.
+    :param max_n_silhouette: subset cells for the Silhouette score to this number.
     :param figsize: matplotlib figsize.
     :param subplot_kwargs: kwargs passed on to plt.subplot.
     :param return_plot: if True, also returns fig and ax.
@@ -55,8 +57,11 @@ def score_resolutions(
     dav_list = []
     for i in tqdm(sorted(columns)):
         test_res = plotdf[i].to_numpy()
+        test_res2 = test_res
+        if len(test_res) > max_n_silhouette:
+            test_res2 = test_res.sample(max_n_silhouette, random_state=42)
         try:
-            sil_list.append(silhouette_score(dims, test_res))
+            sil_list.append(silhouette_score(dims, test_res2))
         except (ValueError, AttributeError):
             sil_list.append(np.nan)
         try:
