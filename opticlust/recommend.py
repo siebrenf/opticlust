@@ -72,7 +72,6 @@ def score_resolutions(
             dav_list.append(davies_bouldin_score(dims, test_res))
         except (ValueError, AttributeError):
             dav_list.append(np.nan)
-        pass
     df = pd.DataFrame(
         list(zip(sil_list, cal_list, dav_list)),
         columns=["SH_score", "CH_score", "DB_score"],
