@@ -55,7 +55,7 @@ def score_resolutions(
     sil_list = []
     cal_list = []
     dav_list = []
-    for i in tqdm(sorted(columns)):
+    for i in tqdm(columns):
         test_res = plotdf[i].to_numpy()
         test_res2 = test_res
         if len(test_res) > max_n_silhouette:
