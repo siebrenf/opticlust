@@ -8,7 +8,7 @@ from sklearn.metrics import (
     davies_bouldin_score,
     silhouette_score,
 )
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 
 def score_resolutions(
