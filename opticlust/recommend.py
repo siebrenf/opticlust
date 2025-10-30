@@ -10,6 +10,8 @@ from sklearn.metrics import (
 )
 from tqdm.auto import tqdm
 
+from .utils import validate_resolutions
+
 
 def score_resolutions(
     adata,
@@ -39,68 +41,81 @@ def score_resolutions(
     :param return_plot: if True, also returns fig and ax.
     """
     use_subset = max_n_silhouette != -1 and len(adata.obs) > max_n_silhouette
-
     columns = natsorted(columns)
-    if columns[0].count("_") != 2:
-        raise ValueError("Column names must be in the shape '[method]_res_[res]'")
-    method_clustering = columns[0].split("_", 1)[0]
-    if method_clustering not in ["leiden", "louvain"]:
-        raise ValueError("Column names must be in the shape '[method]_res_[res]'")
+    method_clustering = validate_resolutions(columns)[0]
 
+    # input data
     plotdf = sc.get.obs_df(
         adata, keys=[*columns], obsm_keys=[("X_umap", 0), ("X_umap", 1)]
     )
-    if use_subset:
-        plotdf_subset = plotdf.sample(max_n_silhouette, random_state=42)
     dim1 = plotdf["X_umap-0"].to_numpy()
     dim2 = plotdf["X_umap-1"].to_numpy()
     dims = np.concatenate((dim1.reshape(-1, 1), dim2.reshape(-1, 1)), axis=1)
+    if use_subset:
+        plotdf_subset = plotdf.sample(max_n_silhouette, axis=0, random_state=42)
+        dim1_subset = plotdf_subset["X_umap-0"].to_numpy()
+        dim2_subset = plotdf_subset["X_umap-1"].to_numpy()
+        dims_subset = np.concatenate(
+            (dim1_subset.reshape(-1, 1), dim2_subset.reshape(-1, 1)), axis=1
+        )
 
-    sil_list = []
-    cal_list = []
-    dav_list = []
-    for i in tqdm(columns):
-        test_res = plotdf[i].to_numpy()
-        try:
-            test_res2 = plotdf_subset[i].to_numpy() if use_subset else test_res
-            sil_list.append(silhouette_score(dims, test_res2))
-        except (ValueError, AttributeError):
-            sil_list.append(np.nan)
-        try:
-            cal_list.append(calinski_harabasz_score(dims, test_res))
-        except (ValueError, AttributeError):
-            cal_list.append(np.nan)
-        try:
-            dav_list.append(davies_bouldin_score(dims, test_res))
-        except (ValueError, AttributeError):
-            dav_list.append(np.nan)
-    df = pd.DataFrame(
-        list(zip(sil_list, cal_list, dav_list)),
-        columns=["SH_score", "CH_score", "DB_score"],
-        index=columns,
-    )
+    # compute raw scores
+    scores = {}
+    for score in tests.split("_"):
+        scores[score] = []
+    for i in tqdm(columns, unit=" cluster resolutions"):
+        test_res = plotdf[i].astype(str).to_numpy()
+        if "SH" in scores:
+            try:
+                if use_subset:
+                    test_res_subset = plotdf_subset[i].astype(str).to_numpy()  # noqa
+                    scores["SH"].append(
+                        silhouette_score(dims_subset, test_res_subset)
+                    )  # noqa
+                else:
+                    scores["SH"].append(silhouette_score(dims, test_res))
+            except (ValueError, AttributeError):
+                scores["SH"].append(np.nan)
+
+        if "CH" in scores:
+            try:
+                scores["CH"].append(calinski_harabasz_score(dims, test_res))
+            except (ValueError, AttributeError):
+                scores["CH"].append(np.nan)
+
+        if "DB" in scores:
+            try:
+                scores["DB"].append(davies_bouldin_score(dims, test_res))
+            except (ValueError, AttributeError):
+                scores["DB"].append(np.nan)
+    df = pd.DataFrame.from_dict(scores)
+    df.columns = [f"{score}_score" for score in scores]
+    df.index = columns
 
     # Normalize the scores with min-max scaling (0-1).
     # DB is inverted because lower indicates better clustering.
-    df["SH_score_normalized"] = (df["SH_score"] - df["SH_score"].min()) / (
-        df["SH_score"].max() - df["SH_score"].min()
-    )
-    df["CH_score_normalized"] = (df["CH_score"] - df["CH_score"].min()) / (
-        df["CH_score"].max() - df["CH_score"].min()
-    )
-    df["DB_score_normalized"] = 1 - (df["DB_score"] - df["DB_score"].min()) / (
-        df["DB_score"].max() - df["DB_score"].min()
-    )
+    if "SH" in scores:
+        df["SH_score_normalized"] = (df["SH_score"] - df["SH_score"].min()) / (
+            df["SH_score"].max() - df["SH_score"].min()
+        )
+    if "CH" in scores:
+        df["CH_score_normalized"] = (df["CH_score"] - df["CH_score"].min()) / (
+            df["CH_score"].max() - df["CH_score"].min()
+        )
+    if "DB" in scores:
+        df["DB_score_normalized"] = 1 - (df["DB_score"] - df["DB_score"].min()) / (
+            df["DB_score"].max() - df["DB_score"].min()
+        )
 
     # Combine the scores
-    columns = [f"{score}_score_normalized" for score in tests.split("_")]
+    columns = [f"{score}_score_normalized" for score in scores]
     if method == "median":
         df["combined_score_normalized"] = df[columns].median(axis=1)
     elif method == "mean":
         # TODO: does a weighted average make sense?
         score_weights = {"CH": 1.0, "DB": 1.0, "SH": 1.0}
         df2 = df[columns].copy()
-        for score in tests.split("_"):
+        for score in scores:
             df2[f"{score}_score_normalized"] = (
                 df2[f"{score}_score_normalized"] * score_weights[score]
             )
@@ -109,7 +124,7 @@ def score_resolutions(
         # Add each test to the combined score,
         #  dividing each test by a larger number to act as tiebreaker .
         df["combined_score_normalized"] = 0
-        for i, score in enumerate(tests.split("_")):
+        for i, score in enumerate(scores):
             df["combined_score_normalized"] += df[f"{score}_score_normalized"] / (
                 1000**i
             )
@@ -120,8 +135,9 @@ def score_resolutions(
         raise ValueError("method must be: median, mean or order")
 
     # Rank the cluster resolutions, using successive scores in param tests as tiebreaker
+
     # First, define the metrics to sort by, and their order
-    order_tests = [f"{score}_score" for score in tests.split("_")]
+    order_tests = [f"{score}_score" for score in scores]
     if method != "order":
         order_tests = ["combined_score_normalized"] + order_tests
 
@@ -139,7 +155,7 @@ def score_resolutions(
     df["rank"] = df.reset_index().index + 1
 
     # Add the metrics to adata
-    adata.uns["opticlust"] = df.sort_index(key=natsort_keygen())
+    adata.uns["opticlust"] = df.sort_index(key=natsort_keygen())  # noqa
     adata.uns["opticlust_params"] = {
         "INFO": "This dict contains the parameters used to generate adata.uns['opticlust']",
         "columns": columns,
@@ -173,14 +189,11 @@ def _plot_metrics(
 
     # Show the plots with normalised scores between 0-1 for the three tests
     fig, ax = plt.subplots(figsize=figsize, **subplot_kwargs)
+    columns = [f"{score}_score_normalized" for score in tests.split("_")]
     df.plot(
         kind="line",
         ls="-",
-        y=[
-            "SH_score_normalized",
-            "DB_score_normalized",
-            "CH_score_normalized",
-        ],
+        y=columns,
         ax=ax,
     )
     df.plot(
@@ -223,11 +236,12 @@ def _plot_metrics(
         handles=handles,
         labels=labels,
     )
-
     plt.tight_layout()
-    plt.show()
+
     if return_plot:
         return fig, ax
+    else:
+        plt.show()
 
 
 def recommend_resolutions(
@@ -250,19 +264,16 @@ def recommend_resolutions(
         "rank",
     ]
     df = adata.uns["opticlust"][score_columns].copy()
-    if columns is None:
-        columns = df.index.to_list()
-    else:
+    if columns:
         if len(set(columns)) != len(set(columns) & set(df.index)):
             raise IndexError(
                 "Not all given columns found. Please run score_resolutions() with these columns!"
             )
         df = df.loc[list(set(columns))]
+    df = df.round(3)
+    if "CH_score" in df.columns:
+        df["CH_score"] = df["CH_score"].round(0)
     df.sort_values("rank", inplace=True)
-
-    method_clustering = columns[0].split("_", 1)[0]
-    if method_clustering not in ["leiden", "louvain"]:
-        raise ValueError("Column names must be in the shape '[method]_res_[res]'")
 
     # Display the sorted DataFrame with full ranking
     pd.set_option("display.max_columns", None)
@@ -272,12 +283,9 @@ def recommend_resolutions(
 
     # Separate the resolution into 3 bins, and return the top resolution of each.
 
-    # Extract [res] from '[method]_res_[res]' to use for selection downstream
-    df["resolutions"] = [x.split("_")[2] for x in df.index]
-    df["resolutions"] = df["resolutions"].astype(float)
-    df = df.round(2).dropna()
-
     # Define the resolution ranges
+    method_clustering, resolutions = validate_resolutions(df.index.to_list())
+    df["resolutions"] = resolutions
     if resolution_max is None:
         resolution_max = df["resolutions"].max()
     if resolution_min is None:

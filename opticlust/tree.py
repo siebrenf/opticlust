@@ -453,7 +453,7 @@ def clustree_plot(
     ax.set_ylabel(f"{method.capitalize()} clustering resolution")
     ax.set_title("opticlust")
 
-    plt.show()
-
     if return_plot:
         return fig, ax
+    else:
+        plt.show()
