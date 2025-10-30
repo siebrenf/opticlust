@@ -265,9 +265,11 @@ def _clustering_rename(adata, g, cluster2barcodes, method):
     # rename the clusters in adata
     for r, d in rename_dict.items():
         column = f"{method}_res_{r}"
+        if adata.obs[column].dtype != "category":
+            adata.obs[column] = adata.obs[column].astype("category")
         adata.obs[column] = adata.obs[column].cat.rename_categories(d)
-        # "remove the "c" prefix
-        # converts the columns dtype object (used for stable UMAP cluster colors)
+        # remove the "c" prefix
+        # converts the columns dtype object (required for stable UMAP cluster colors)
         adata.obs[column] = adata.obs[column].str.removeprefix("c")
 
     # leave the node name, but rename the node label
