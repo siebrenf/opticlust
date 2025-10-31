@@ -1,9 +1,12 @@
+from itertools import cycle
 import warnings
 
 import matplotlib.pyplot as plt
 import networkx as nx
 import scanpy as sc
 from natsort import natsorted
+
+from .utils import validate_resolutions
 
 
 def clustree(adata, columns, rename_cluster=True, cluster2color=None, colors=None):
@@ -276,7 +279,7 @@ def _clustering_rename(adata, g, cluster2barcodes, method):
     for node, md in g.nodes(data=True):
         r, c = node.split("_")
         label = rename_dict[r][c]
-        md["label"] = label[1:]  # "remove the "c" prefix
+        md["label"] = label[1:]  # remove the "c" prefix
 
 
 def clustree_plot(
@@ -459,3 +462,208 @@ def clustree_plot(
         return fig, ax
     else:
         plt.show()
+
+
+
+
+
+def test(adata, columns, rename_cluster=True, cluster2color=None, colors=None, node_size_min=False, node_multiplier=6, edge_multiplier=1):
+    """
+    Map the clusters to a tree structure.
+    The resolution descends along the y-axis (min at the top, max at the bottom),
+    and the clusters are distributed over the x-axis by size.
+    Daughter clusters are plotted proximal to the parent with the highest cell overlap.
+
+    If rename_cluster is True, clusters are updated in adata.obs and colors are updated in adata.uns
+    such that the color is passed from parent the daughter with the largest cell overlap.
+    Note that this does **not** alter the clusters or data in any way.
+
+    :param adata: dataset
+    :param columns: a list of adata.obs column names to use.
+    :param rename_cluster: change the cluster names in adata.obs
+    :param cluster2color: optional dictionary to specify the cluster to color relation
+    :param colors: optional list of colors (default: scanpy defaults)
+    :param node_size_min: allow smaller nodes to shrink beyond label size? (default: False)
+    :param node_multiplier: multiply all node sizes by this factor (default: 6)
+    :param edge_multiplier: multiply all edge widths by this factor (default: 1)
+    :return: plot_data: a dictionary used in clustree_plot
+    """
+    rename_clusters = True  # TODO: remove
+    cluster2color = None # TODO: remove
+    colors = None  # TODO: remove
+    node_size_min = True  # TODO: remove
+    node_multiplier = 6  # TODO: remove
+    edge_multiplier = 1  # TODO: remove
+
+    columns = natsorted(columns)
+    method_clustering,  resolutions = validate_resolutions(columns)  # TODO: add to plot
+    if cluster2color is None:
+        cluster2color = {}
+        if colors is None:
+            colors = sc.pl.palettes.vega_20_scanpy  # default scanpy colors
+        colors = cycle(colors)
+    elif colors:
+        warnings.warn(
+            "You provided both cluster2color and colors. "
+            "Argument colors will be ignored."
+        )
+
+    # Build a cluster tree graph
+    g = nx.DiGraph()
+    n_cells_total = len(adata.obs)
+    top_level_clusters = {}  # used to rename and recolor the clusters
+
+    # first row
+    column = columns[0]
+    res = column.rsplit("_", 1)[1]
+    cluster2barcodes = {}
+    for node_name in adata.obs[column].unique():
+        node_id = f"{res}_{node_name}"
+
+        barcodes = set(adata.obs[adata.obs[column] == node_name].index)
+        cluster2barcodes[node_id] = barcodes
+        top_level_clusters[node_id] = len(barcodes)
+
+        node_size = node_multiplier * len(barcodes) / n_cells_total
+        if node_name not in cluster2color:
+            cluster2color[node_name] = next(colors)
+        g.add_node(
+            node_id,
+            width=node_size,
+            height=node_size,
+            fixedsize=not node_size_min,
+            label=f"{node_name: ^3}",  # current name & color
+            color=cluster2color[node_name],
+            shape="circle",
+            style="filled",
+        )
+    prev_cluster2barcodes = cluster2barcodes
+
+    # every other row
+    for column in columns[1:]:
+        res = column.rsplit("_", 1)[1]
+        cluster2barcodes = {}
+        for node_name in adata.obs[column].unique():
+            node_id = f"{res}_{node_name}"
+
+            barcodes = set(adata.obs[adata.obs[column] == node_name].index)
+            cluster2barcodes[node_id] = barcodes
+
+            # add node
+            node_size = node_multiplier * len(barcodes) / n_cells_total
+            if node_name not in cluster2color:
+                cluster2color[node_name] = next(colors)
+            g.add_node(
+                node_id,
+                width=node_size,
+                height=node_size,
+                fixedsize=not node_size_min,
+                label=f"{node_name: ^3}",  # current name & color
+                color=cluster2color[node_name],
+                shape="circle",
+                style="filled",
+            )
+
+            # add edges to parents
+            for parent, barcodes_parent in prev_cluster2barcodes.items():
+                n_overlap = len(barcodes & barcodes_parent)
+                if n_overlap == 0:
+                    continue
+                # make the edge 0 width if the number of cells is too low
+                # (always draw the edge in order to plot the node in the correct location)
+                edge_size = edge_multiplier * n_overlap/10
+                g.add_edge(
+                    parent,
+                    node_id,
+                    _overlap=n_overlap,
+                    penwidth=edge_size,
+                    arrowsize=0.1,  # relative to penwidth
+                    color="black",
+                )
+        prev_cluster2barcodes = cluster2barcodes
+
+    if rename_clusters:
+        _rename_clusters(g, cluster2color, top_level_clusters, colors)
+
+        to_rename = {}  # TODO: this is currently not working(?)
+        for node_id, md in g.nodes(data=True):
+            res, cluster = node_id.split("_")
+            if res not in to_rename:
+                to_rename[res] = {}
+            to_rename[res][cluster] = md["label"]
+        for res, d in to_rename.items():
+            column = f"{method_clustering}_res_{float(res):4.2f}"
+            if adata.obs[column].dtype != "category":
+                adata.obs[column] = adata.obs[column].astype("category")
+            adata.obs[column] = adata.obs[column].cat.rename_categories(d)
+            # order = natsorted(d.values())
+            # adata.obs[column] = adata.obs[column].cat.rename_categories(order)  # ordered
+            # adata.obs[column] = adata.obs[column].astype(str)
+
+    # (over)write the cluster colors in the adata object,
+    # so they will match the tree plot colors
+    for column in columns:  # TODO: this is currently not working(?)
+        clusters = adata.obs[column].unique()
+        adata.uns[f"{column}_colors"] = [
+            color
+            for cluster, color in cluster2color.items()
+            if cluster in clusters
+        ]
+
+    # TODO: formalize plotting
+    #  - add resolution as y-axis
+    #  - add legend?
+    #  - add title?
+    #  - save/return options
+    a = nx.drawing.nx_agraph.to_agraph(g)
+    a.layout('dot')  # untangles the edges
+    a.draw('clustree.png')
+    sc.pl.umap(adata, color=columns, legend_loc="on data", alpha=0.75, ncols=3, show=False, save="clustree.png")
+
+
+def _rename_clusters(g, cluster2color, top_level_clusters, colors):
+    # Give the top level clusters a name and color
+    next_cluster_id = 0
+    # sort nodes by size
+    top_level_clusters = dict(sorted(top_level_clusters.items(), key=lambda item: item[1], reverse=True))
+    for node_id in top_level_clusters:
+        node_name = str(next_cluster_id)
+        next_cluster_id += 1
+        if node_name not in cluster2color:
+            cluster2color[node_name] = next(colors)
+        g.nodes[node_id]["label"] = f"{node_name: ^3}"
+        g.nodes[node_id]["color"] = cluster2color[node_name]
+
+    # Rename and recolor the daughter nodes of the given parents recursively.
+    # Give the daughter cluster with the highest overlap the name and color of the parent.
+    parents = set(top_level_clusters)
+    while parents:
+        daughters = set()
+        seen = set()
+        has_successor = set()
+        # collect all outgoing edges from the parents
+        cluster2overlap = {}
+        for parent, daughter, md in g.out_edges(parents, data=True):
+            cluster2overlap[(parent, daughter)] = md["_overlap"]
+        # sort edges by overlap
+        cluster2overlap = dict(sorted(cluster2overlap.items(), key=lambda item: item[1], reverse=True))
+        # rename and recolor the daughters
+        for (parent, daughter), overlap in cluster2overlap.items():
+            if daughter in seen:
+                continue
+            daughters.add(daughter)
+            if parent not in has_successor:
+                # assign the largest daughter its parent name and color
+                g.nodes[daughter]["label"] = g.nodes[parent]["label"]
+                g.nodes[daughter]["color"] = g.nodes[parent]["color"]
+                has_successor.add(parent)
+            else:
+                # assign the rest new names and colors, in order of overlap
+                node_name = str(next_cluster_id)
+                next_cluster_id += 1
+                if node_name not in cluster2color:
+                    cluster2color[node_name] = next(colors)
+                g.nodes[daughter]["label"] = f"{node_name: ^3}"
+                g.nodes[daughter]["color"] = cluster2color[node_name]
+            seen.add(daughter)
+        parents = daughters
