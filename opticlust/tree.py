@@ -370,7 +370,7 @@ def clustree_plot(
         edge_widths.append(s)
 
     fig, ax = plt.subplots(
-        figsize=(fig_scale * n_resolutions, fig_scale * n_clusters), **subplot_kwargs
+        figsize=(fig_scale * n_clusters, fig_scale * n_resolutions), **subplot_kwargs
     )
 
     nodes = nx.draw_networkx_nodes(
