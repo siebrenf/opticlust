@@ -7,7 +7,7 @@ import scanpy as sc
 
 from opticlust.clust import clustering, clustering_plot
 from opticlust.recommend import recommend_resolutions, score_resolutions
-from opticlust.tree import clustree, clustree_plot
+from opticlust.tree import clustree
 
 # configuration
 matplotlib.use("TkAgg")
@@ -32,8 +32,7 @@ tree_columns = clustering_plot(adata, columns, method="score", min_n_resolutions
 top_overall, top_low, top_medium, top_high = recommend_resolutions(adata, tree_columns)
 
 # build tree & plotting (updates adata.obs)
-tree_data = clustree(adata, tree_columns, rename_cluster=True)
-clustree_plot(tree_data)
+clustree(adata, tree_columns, rename_clusters=True)
 
 # plot the UMAPs for each resolution
 sc.pl.umap(adata, color=tree_columns, legend_loc="on data", alpha=0.75, ncols=3)
