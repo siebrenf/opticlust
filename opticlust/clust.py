@@ -158,6 +158,7 @@ def clustering_plot(
     for res, n_clusters in zip(x_clust, y_clust):
         if n_clusters > 1:  # a single cluster is not informative
             cluster_resolutions.append(f"{method_clustering}_res_{res:4.2f}")
+    cluster_resolutions = natsorted(cluster_resolutions)
 
     # plotting
     fig, ax = plt.subplots(figsize=figsize, **subplot_kwargs)

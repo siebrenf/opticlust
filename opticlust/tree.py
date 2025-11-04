@@ -133,7 +133,7 @@ def clustree(
                 g.add_edge(
                     parent,
                     node_id,
-                    _overlap=n_overlap,
+                    _n_overlap=n_overlap,
                     penwidth=edge_size,
                     arrowsize=0.1,  # relative to penwidth
                     color="black",
@@ -154,7 +154,7 @@ def clustree(
     # a = nx.drawing.nx_agraph.to_agraph(g)
     # a.layout('dot')  # untangles the edges
     # a.draw('clustree.png')
-    _plot_clustree(
+    return _plot_clustree(
         g,
         method_clustering,
         resolutions,
@@ -186,7 +186,6 @@ def _rename_clusters_in_graph(g, cluster2color, top_level_clusters, colors):
         g.nodes[node_id]["label"] = f"{node_name: ^3}"
         g.nodes[node_id]["color"] = cluster2color[node_name]
 
-    # TODO: track if clusters disappear and later re-appear (to keep the same name)
     # Rename and recolor the daughter nodes of the given parents recursively.
     # Give the daughter cluster with the highest overlap the name and color of the parent.
     parents = set(top_level_clusters)
@@ -197,7 +196,7 @@ def _rename_clusters_in_graph(g, cluster2color, top_level_clusters, colors):
         # collect all outgoing edges from the parents
         cluster2overlap = {}
         for parent, daughter, md in g.out_edges(parents, data=True):
-            cluster2overlap[(parent, daughter)] = md["_overlap"]
+            cluster2overlap[(parent, daughter)] = md["_n_overlap"]
         # sort edges by overlap
         cluster2overlap = dict(
             sorted(cluster2overlap.items(), key=lambda item: item[1], reverse=True)
@@ -265,12 +264,12 @@ def _plot_clustree(
         }
     if legend_kwargs is None:
         legend_kwargs = {
-            "labelspacing": 2,
-            "borderpad": 2,
+            # "labelspacing": 2,
+            # "borderpad": 2,
         }
 
     with warnings.catch_warnings():
-        warnings.simplefilter("ignore")  # Warning: node ... size too small for label
+        warnings.simplefilter("ignore")  # Warning: node [...] size too small for label
         pos = nx.nx_agraph.graphviz_layout(g, prog="dot")  # untangles the edges
 
     fig, ax = plt.subplots(**subplot_kwargs)
@@ -312,25 +311,32 @@ def _plot_clustree(
     )
     ax.add_artist(leg1)
 
-    # add a legend for edge widths (with max 8 elements)
-    l2h = {}
-    for i, label in enumerate(nx.get_edge_attributes(g, "_overlap").values()):
-        if label not in labels:
-            l2h[label] = arrows[i]
-    handles, labels = [], []
-    if len(l2h) > 8:
-        sorted_labels = sorted(l2h)
-        j = len(sorted_labels) // 8
-        for i in [0, j * 2, j * 4, j * 6, j * 8]:
-            labels.append(sorted_labels[i])
-            handles.append(l2h[sorted_labels[i]])
-    else:
-        for label in sorted(l2h):
-            labels.append(label)
-            handles.append(l2h[label])
+    # add a legend for edge widths
+    # using a custom legend because the edges are too large in the legend
+    e = sorted(set(edge_widths))
+    e_mn = min(edge_widths)
+    e_q1 = e[1 * len(e) // 4]
+    e_q2 = e[2 * len(e) // 4]
+    e_q3 = e[3 * len(e) // 4]
+    e_mx = max(edge_widths)
+    overlaps = list(nx.get_edge_attributes(g, "_n_overlap").values())
+    (e_mn_h,) = plt.plot(
+        [], [], color="black", linewidth=e_mn, label=overlaps[edge_widths.index(e_mn)]
+    )
+    (e_q1_h,) = plt.plot(
+        [], [], color="black", linewidth=e_q1, label=overlaps[edge_widths.index(e_q1)]
+    )
+    (e_q2_h,) = plt.plot(
+        [], [], color="black", linewidth=e_q2, label=overlaps[edge_widths.index(e_q2)]
+    )
+    (e_q3_h,) = plt.plot(
+        [], [], color="black", linewidth=e_q3, label=overlaps[edge_widths.index(e_q3)]
+    )
+    (e_mx_h,) = plt.plot(
+        [], [], color="black", linewidth=e_mx, label=overlaps[edge_widths.index(e_mx)]
+    )
     leg2 = ax.legend(
-        handles,  # TODO: edge width is much larger in the legend?
-        labels,
+        handles=[e_mn_h, e_q1_h, e_q2_h, e_q3_h, e_mx_h],
         title="Cluster overlap",
         loc="center left",
         bbox_to_anchor=(1, 0.50),

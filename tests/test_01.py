@@ -54,18 +54,21 @@ def test_black_lint():
     base = dirname(dirname(__file__))
     sp.check_output(
         "black "
-        + f"{join(base, 'opticlust')} {join(base, 'tests')} {join(base, 'tutorial.py')}",
+        + f"{join(base, 'opticlust')} {join(base, 'tests')} "
+        + f"{join(base, 'tutorial.py')} {join(base, 'imgs', 'tutorial.py')}",
         shell=True,
     )
     sp.check_output(
         "isort --overwrite-in-place --profile black --conda-env requirements.yaml "
-        + f"{join(base, 'opticlust')} {join(base, 'tests')} {join(base, 'tutorial.py')}",
+        + f"{join(base, 'opticlust')} {join(base, 'tests')} "
+        + f"{join(base, 'tutorial.py')} {join(base, 'imgs', 'tutorial.py')}",
         shell=True,
     )
 
     sp.check_output(
         "ruff check --line-length 88 --extend-select C4,SIM,TCH,E4,E7,E9,F --ignore E402 "
-        + f"{join(base, 'opticlust')} {join(base, 'tests')} {join(base, 'tutorial.py')}",
+        + f"{join(base, 'opticlust')} {join(base, 'tests')} "
+        + f"{join(base, 'tutorial.py')} {join(base, 'imgs', 'tutorial.py')}",
         shell=True,
     )
 
@@ -182,8 +185,8 @@ def test_recommendresolutions_tree_columns(adata_scored, tree_columns):
     overall, low, medium, high = recommend_resolutions(adata_scored, tree_columns)
     assert overall == "leiden_res_0.20"
     assert low == "leiden_res_0.20"
-    assert medium == "leiden_res_1.07"
-    assert high == "leiden_res_1.75"
+    assert medium == "leiden_res_1.23"
+    assert high == "leiden_res_1.48"
 
 
 def test_buildtree_fail(adata_clean):
