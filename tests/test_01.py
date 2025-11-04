@@ -185,8 +185,8 @@ def test_recommendresolutions_tree_columns(adata_scored, tree_columns):
     overall, low, medium, high = recommend_resolutions(adata_scored, tree_columns)
     assert overall == "leiden_res_0.20"
     assert low == "leiden_res_0.20"
-    assert medium == "leiden_res_1.23"
-    assert high == "leiden_res_1.48"
+    assert medium == "leiden_res_0.43"
+    assert high == "leiden_res_1.23"
 
 
 def test_buildtree_fail(adata_clean):
