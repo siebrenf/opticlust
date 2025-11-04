@@ -72,12 +72,14 @@ def clustree(
     # 1) first row
     column = columns[0]
     res = column.rsplit("_", 1)[1]
-    cluster2barcodes = {}
+    # cluster2barcodes = {}
+    cur_clusters = []
     for node_name in adata.obs[column].unique():
         node_id = f"{res}_{node_name}"
 
         barcodes = set(adata.obs[adata.obs[column] == node_name].index)
-        cluster2barcodes[node_id] = barcodes
+        # cluster2barcodes[node_id] = barcodes
+        cur_clusters.append(node_id)
         top_level_clusters[node_id] = len(barcodes)
 
         node_size = node_multiplier * len(barcodes) / n_cells_total
@@ -86,6 +88,7 @@ def clustree(
         g.add_node(
             node_id,
             _n_cells=len(barcodes),
+            _barcodes=barcodes,
             width=node_size,
             height=node_size,
             fixedsize=not node_size_min,
@@ -94,17 +97,20 @@ def clustree(
             shape="circle",
             style="filled",
         )
-    prev_cluster2barcodes = cluster2barcodes
+    # prev_cluster2barcodes = cluster2barcodes
+    prev_clusters = cur_clusters
 
     # 2) every other row
     for column in columns[1:]:
         res = column.rsplit("_", 1)[1]
-        cluster2barcodes = {}
+        # cluster2barcodes = {}
+        cur_clusters = []
         for node_name in adata.obs[column].unique():
             node_id = f"{res}_{node_name}"
 
             barcodes = set(adata.obs[adata.obs[column] == node_name].index)
-            cluster2barcodes[node_id] = barcodes
+            # cluster2barcodes[node_id] = barcodes
+            cur_clusters.append(node_id)
 
             # add node
             node_size = node_multiplier * len(barcodes) / n_cells_total
@@ -113,6 +119,7 @@ def clustree(
             g.add_node(
                 node_id,
                 _n_cells=len(barcodes),
+                _barcodes=barcodes,
                 width=node_size,
                 height=node_size,
                 fixedsize=not node_size_min,
@@ -123,7 +130,9 @@ def clustree(
             )
 
             # add edges to parents
-            for parent, barcodes_parent in prev_cluster2barcodes.items():
+            # for parent, barcodes_parent in prev_cluster2barcodes.items():
+            for parent in prev_clusters:
+                barcodes_parent = g.nodes[parent]["_barcodes"]
                 n_overlap = len(barcodes & barcodes_parent)
                 if n_overlap == 0:
                     continue
@@ -138,7 +147,8 @@ def clustree(
                     arrowsize=0.1,  # relative to penwidth
                     color="black",
                 )
-        prev_cluster2barcodes = cluster2barcodes
+        # prev_cluster2barcodes = cluster2barcodes
+        prev_clusters = cur_clusters
 
     if rename_clusters:
         _rename_clusters_in_graph(g, cluster2color, top_level_clusters, colors)
@@ -189,10 +199,12 @@ def _rename_clusters_in_graph(g, cluster2color, top_level_clusters, colors):
     # Rename and recolor the daughter nodes of the given parents recursively.
     # Give the daughter cluster with the highest overlap the name and color of the parent.
     parents = set(top_level_clusters)
+    ancestors_without_descendants = set()
     while parents:
         daughters = set()
-        seen = set()
-        has_successor = set()
+        has_descendant = set()
+        unknown_ancestor = []
+
         # collect all outgoing edges from the parents
         cluster2overlap = {}
         for parent, daughter, md in g.out_edges(parents, data=True):
@@ -203,23 +215,46 @@ def _rename_clusters_in_graph(g, cluster2color, top_level_clusters, colors):
         )
         # rename and recolor the daughters
         for (parent, daughter), overlap in cluster2overlap.items():
-            if daughter in seen:
+            if daughter in daughters:
                 continue
             daughters.add(daughter)
-            if parent not in has_successor:
+            if parent not in has_descendant:
                 # assign the largest daughter its parent name and color
                 g.nodes[daughter]["label"] = g.nodes[parent]["label"]
                 g.nodes[daughter]["color"] = g.nodes[parent]["color"]
-                has_successor.add(parent)
+                has_descendant.add(parent)
             else:
-                # assign the rest new names and colors, in order of overlap
+                unknown_ancestor.append(daughter)
+
+        # try to assign the cluster to an ancestor without descendants
+        # or give it a new cluster name
+        for daughter in unknown_ancestor:
+            barcodes = g.nodes[daughter]["_barcodes"]
+            best = None, 0
+            for ancestor in ancestors_without_descendants:
+                barcodes_ancestor = g.nodes[ancestor]["_barcodes"]
+                n_overlap = len(barcodes & barcodes_ancestor)
+                if n_overlap > best[1]:
+                    best = ancestor, n_overlap
+            if best[1] > 0:
+                # assign the daughter the ancestor's name and color
+                ancestor = best[0]
+                g.nodes[daughter]["label"] = g.nodes[ancestor]["label"]
+                g.nodes[daughter]["color"] = g.nodes[ancestor]["color"]
+                ancestors_without_descendants.remove(ancestor)
+            else:
+                # assign the daughter a new name and color
                 node_name = str(next_cluster_id)
                 next_cluster_id += 1
                 if node_name not in cluster2color:
                     cluster2color[node_name] = next(colors)
                 g.nodes[daughter]["label"] = f"{node_name: ^3}"
                 g.nodes[daughter]["color"] = cluster2color[node_name]
-            seen.add(daughter)
+
+        ancestors_without_descendants = ancestors_without_descendants | (
+            parents - has_descendant
+        )
+
         parents = daughters
 
 
