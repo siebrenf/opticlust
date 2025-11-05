@@ -182,9 +182,9 @@ def _rename_clusters_in_graph(g, cluster2color, top_level_clusters, colors):
     Rename the clusters in graph g.
     Add colors to cluster2color if new clusters are added.
     """
-    # Give the top level clusters a name and color
     next_cluster_id = 0
-    # sort nodes by size
+
+    # Give the top level clusters a name and color in order of size
     top_level_clusters = dict(
         sorted(top_level_clusters.items(), key=lambda item: item[1], reverse=True)
     )
@@ -196,65 +196,76 @@ def _rename_clusters_in_graph(g, cluster2color, top_level_clusters, colors):
         g.nodes[node_id]["label"] = f"{node_name: ^3}"
         g.nodes[node_id]["color"] = cluster2color[node_name]
 
-    # Rename and recolor the daughter nodes of the given parents recursively.
-    # Give the daughter cluster with the highest overlap the name and color of the parent.
+    # Rename and recolor daughter nodes recursively.
     parents = set(top_level_clusters)
-    ancestors_without_descendants = set()
+    ancestors_without_descendant = {}
     while parents:
         daughters = set()
-        has_descendant = set()
-        unknown_ancestor = []
+        daughters_without_ancestor = {}
+        parents_with_descendant = set()
 
-        # collect all outgoing edges from the parents
-        cluster2overlap = {}
+        # 1) assign the daughter with the largest overlap a parent's name and color
+        cluster2overlap = {}  # collect all outgoing edges from the parents
         for parent, daughter, md in g.out_edges(parents, data=True):
             cluster2overlap[(parent, daughter)] = md["_n_overlap"]
-        # sort edges by overlap
+            if daughter not in daughters_without_ancestor:
+                daughters_without_ancestor[daughter] = g.nodes[daughter]["_barcodes"]
         cluster2overlap = dict(
             sorted(cluster2overlap.items(), key=lambda item: item[1], reverse=True)
         )
-        # rename and recolor the daughters
+        daughter_without_ancestor = dict(
+            sorted(
+                daughters_without_ancestor.items(),
+                key=lambda item: len(item[1]),
+                reverse=True,
+            )
+        )
         for (parent, daughter), overlap in cluster2overlap.items():
-            if daughter in daughters:
-                continue
+            if daughter in daughters or parent in parents_with_descendant:
+                continue  # only rename a cluster once
+            g.nodes[daughter]["label"] = g.nodes[parent]["label"]
+            g.nodes[daughter]["color"] = g.nodes[parent]["color"]
+            parents_with_descendant.add(parent)
+            del daughter_without_ancestor[daughter]
             daughters.add(daughter)
-            if parent not in has_descendant:
-                # assign the largest daughter its parent name and color
-                g.nodes[daughter]["label"] = g.nodes[parent]["label"]
-                g.nodes[daughter]["color"] = g.nodes[parent]["color"]
-                has_descendant.add(parent)
-            else:
-                unknown_ancestor.append(daughter)
 
-        # try to assign the cluster to an ancestor without descendants
-        # or give it a new cluster name
-        for daughter in unknown_ancestor:
-            barcodes = g.nodes[daughter]["_barcodes"]
+        # 2) assign the daughter with the largest overlap an ancestor's name and color
+        for ancestor, barcodes_ancestor in list(ancestors_without_descendant.items()):
             best = None, 0
-            for ancestor in ancestors_without_descendants:
-                barcodes_ancestor = g.nodes[ancestor]["_barcodes"]
+            for daughter, barcodes in daughter_without_ancestor.items():
                 n_overlap = len(barcodes & barcodes_ancestor)
                 if n_overlap > best[1]:
-                    best = ancestor, n_overlap
+                    best = daughter, n_overlap
             if best[1] > 0:
-                # assign the daughter the ancestor's name and color
-                ancestor = best[0]
+                daughter = best[0]
                 g.nodes[daughter]["label"] = g.nodes[ancestor]["label"]
                 g.nodes[daughter]["color"] = g.nodes[ancestor]["color"]
-                ancestors_without_descendants.remove(ancestor)
-            else:
-                # assign the daughter a new name and color
-                node_name = str(next_cluster_id)
-                next_cluster_id += 1
-                if node_name not in cluster2color:
-                    cluster2color[node_name] = next(colors)
-                g.nodes[daughter]["label"] = f"{node_name: ^3}"
-                g.nodes[daughter]["color"] = cluster2color[node_name]
+                del ancestors_without_descendant[ancestor]
+                del daughter_without_ancestor[daughter]
+                daughters.add(daughter)
 
-        ancestors_without_descendants = ancestors_without_descendants | (
-            parents - has_descendant
+        # 3) assign the daughter a new name and color
+        for daughter in list(daughter_without_ancestor):
+            node_name = str(next_cluster_id)
+            next_cluster_id += 1
+            if node_name not in cluster2color:
+                cluster2color[node_name] = next(colors)
+            g.nodes[daughter]["label"] = f"{node_name: ^3}"
+            g.nodes[daughter]["color"] = cluster2color[node_name]
+            daughters.add(daughter)
+
+        # update ancestors_without_descendant
+        for parent in parents - parents_with_descendant:
+            ancestors_without_descendant[parent] = g.nodes[parent]["_barcodes"]
+        ancestors_without_descendant = dict(
+            sorted(
+                ancestors_without_descendant.items(),
+                key=lambda item: len(item[1]),
+                reverse=True,
+            )
         )
 
+        # next iteration
         parents = daughters
 
 
