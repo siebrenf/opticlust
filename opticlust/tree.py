@@ -5,6 +5,8 @@ import networkx as nx
 import scanpy as sc
 from natsort import natsorted
 
+from .utils import validate_resolutions
+
 
 def clustree(adata, columns, rename_cluster=True, cluster2color=None, colors=None):
     """
@@ -42,23 +44,11 @@ def clustree(adata, columns, rename_cluster=True, cluster2color=None, colors=Non
     columns = []
     for c in sorted(clusters_per_column):
         columns.extend(clusters_per_column[c])
+    method = validate_resolutions(columns)[0]
 
     g = nx.DiGraph()
     y_ticks = []  # plot label
     y_labels = []  # plot label
-    if column.count("_") != 2:
-        raise ValueError("Column names must be in the shape '[method]_res_[res]'")
-    method = column.split("_", 1)[0]
-    if method not in ["leiden", "louvain"]:
-        raise ValueError(
-            "Column names must be in the shape '[method]_res_[res]' (with [method] leiden or louvain)"
-        )
-    try:
-        float(column.rsplit("_", 1)[1])
-    except ValueError:
-        raise ValueError(
-            "Column names must be in the shape '[method]_res_[res]' (with [res] a float, e.g. 0.53)"
-        )
 
     # set cluster colors
     if cluster2color is None:
@@ -276,7 +266,7 @@ def _clustering_rename(adata, g, cluster2barcodes, method):
     for node, md in g.nodes(data=True):
         r, c = node.split("_")
         label = rename_dict[r][c]
-        md["label"] = label[1:]  # "remove the "c" prefix
+        md["label"] = label[1:]  # remove the "c" prefix
 
 
 def clustree_plot(
