@@ -5,6 +5,8 @@ import networkx as nx
 import scanpy as sc
 from natsort import natsorted
 
+from .utils import validate_resolutions
+
 
 def clustree(adata, columns, rename_cluster=True, cluster2color=None, colors=None):
     """
@@ -42,23 +44,11 @@ def clustree(adata, columns, rename_cluster=True, cluster2color=None, colors=Non
     columns = []
     for c in sorted(clusters_per_column):
         columns.extend(clusters_per_column[c])
+    method = validate_resolutions(columns)[0]
 
     g = nx.DiGraph()
     y_ticks = []  # plot label
     y_labels = []  # plot label
-    if column.count("_") != 2:
-        raise ValueError("Column names must be in the shape '[method]_res_[res]'")
-    method = column.split("_", 1)[0]
-    if method not in ["leiden", "louvain"]:
-        raise ValueError(
-            "Column names must be in the shape '[method]_res_[res]' (with [method] leiden or louvain)"
-        )
-    try:
-        float(column.rsplit("_", 1)[1])
-    except ValueError:
-        raise ValueError(
-            "Column names must be in the shape '[method]_res_[res]' (with [res] a float, e.g. 0.53)"
-        )
 
     # set cluster colors
     if cluster2color is None:
@@ -265,16 +255,18 @@ def _clustering_rename(adata, g, cluster2barcodes, method):
     # rename the clusters in adata
     for r, d in rename_dict.items():
         column = f"{method}_res_{r}"
+        if adata.obs[column].dtype != "category":
+            adata.obs[column] = adata.obs[column].astype("category")
         adata.obs[column] = adata.obs[column].cat.rename_categories(d)
-        # "remove the "c" prefix
-        # converts the columns dtype object (used for stable UMAP cluster colors)
+        # remove the "c" prefix
+        # converts the columns dtype object (required for stable UMAP cluster colors)
         adata.obs[column] = adata.obs[column].str.removeprefix("c")
 
     # leave the node name, but rename the node label
     for node, md in g.nodes(data=True):
         r, c = node.split("_")
         label = rename_dict[r][c]
-        md["label"] = label[1:]  # "remove the "c" prefix
+        md["label"] = label[1:]  # remove the "c" prefix
 
 
 def clustree_plot(
@@ -368,7 +360,7 @@ def clustree_plot(
         edge_widths.append(s)
 
     fig, ax = plt.subplots(
-        figsize=(fig_scale * n_resolutions, fig_scale * n_clusters), **subplot_kwargs
+        figsize=(fig_scale * n_clusters, fig_scale * n_resolutions), **subplot_kwargs
     )
 
     nodes = nx.draw_networkx_nodes(
@@ -453,7 +445,7 @@ def clustree_plot(
     ax.set_ylabel(f"{method.capitalize()} clustering resolution")
     ax.set_title("opticlust")
 
-    plt.show()
-
     if return_plot:
         return fig, ax
+    else:
+        plt.show()

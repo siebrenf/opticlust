@@ -16,6 +16,7 @@ import scanpy as sc
 from opticlust.clust import clustering, clustering_plot
 from opticlust.recommend import recommend_resolutions, score_resolutions
 from opticlust.tree import clustree, clustree_plot
+from opticlust.utils import validate_resolutions
 
 matplotlib.use("agg")  # This stop images from showing and blocking pytest
 IN_GITHUB_ACTIONS = os.getenv("GITHUB_ACTIONS") == "true"
@@ -75,6 +76,31 @@ def test_load_data_positive(adata_clean):
     assert isinstance(adata_clean.X, np.ndarray)
 
 
+def test_validate_resolutions():
+    columns = ["leiden_res_0.00"]
+    method_clustering, resolutions = validate_resolutions(columns)
+    assert method_clustering == "leiden"
+    assert resolutions == [0.00]
+
+    columns = ["louvain_res_1.00", "louvain_res_2.00"]
+    method_clustering, resolutions = validate_resolutions(columns)
+    assert method_clustering == "louvain"
+    assert resolutions == [1.00, 2.00]
+
+    for columns in [
+        ["Wrong_Number_Of_Underscores"],
+        ["leiden_RandomText_0.00"],
+        ["WrongMethod_res_0.00"],
+        ["leiden_res_NotAnInt"],
+    ]:
+        with pytest.raises(Exception) as excinfo:
+            validate_resolutions(columns)
+        assert (
+            str(excinfo.value)
+            == "Column names must be in the shape '[method]_res_[res]'"
+        )
+
+
 def test_clustering_positive(adata_clean):
     columns = clustering(adata_clean, samples=81)
     assert isinstance(columns, list)
@@ -117,9 +143,9 @@ def test_score_resolutions_2_order(adata_clean, columns):
 def test_score_resolutions_subset(adata_clean, columns):
     adata = adata_clean.copy()
     # no subset
-    score_resolutions(adata, columns[0:2], max_n_silhouette=-1)
+    score_resolutions(adata, columns[-3:-1], max_n_silhouette=-1)
     # subset
-    score_resolutions(adata, columns[0:2], max_n_silhouette=1)
+    score_resolutions(adata, columns[-3:-1], max_n_silhouette=1)
 
 
 def test_clusteringplot_middle(adata_clean, columns):
@@ -154,10 +180,12 @@ def test_clusteringplot_fail(adata_clean, columns):
 
 def test_recommendresolutions_tree_columns(adata_scored, tree_columns):
     overall, low, medium, high = recommend_resolutions(adata_scored, tree_columns)
-    assert overall == "leiden_res_0.20"
-    assert low == "leiden_res_0.20"
-    assert medium == "leiden_res_1.07"
-    assert high == "leiden_res_1.75"
+    assert overall in [low, medium, high]
+    # exact recommendations depend on versions
+    res_low = float(low.rsplit("_", 1)[1])
+    res_medium = float(medium.rsplit("_", 1)[1])
+    res_high = float(high.rsplit("_", 1)[1])
+    assert res_low < res_medium < res_high
 
 
 def test_buildtree_tree_data(adata_clean, tree_columns):
