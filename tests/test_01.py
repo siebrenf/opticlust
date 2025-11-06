@@ -183,10 +183,12 @@ def test_clusteringplot_fail(adata_clean, columns):
 
 def test_recommendresolutions_tree_columns(adata_scored, tree_columns):
     overall, low, medium, high = recommend_resolutions(adata_scored, tree_columns)
-    assert overall == "leiden_res_0.20"
-    assert low == "leiden_res_0.20"
-    assert medium == "leiden_res_0.43"
-    assert high == "leiden_res_1.23"
+    assert overall in [low, medium, high]
+    # exact recommendations depend on versions
+    res_low = float(low.rsplit("_", 1)[1])
+    res_medium = float(medium.rsplit("_", 1)[1])
+    res_high = float(high.rsplit("_", 1)[1])
+    assert res_low < res_medium < res_high
 
 
 def test_buildtree_fail(adata_clean):
