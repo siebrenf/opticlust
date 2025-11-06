@@ -73,6 +73,9 @@ jobs:
     - name: Check-out repository
       uses: actions/checkout@v2
 
+    - name: Setup Graphviz
+      uses: ts-graphviz/setup-graphviz@v2
+
     # Create venv
     - name: Create venv
       run: python3 -m venv venv
