@@ -17,7 +17,8 @@ def clustree(
     colors=None,
     node_size_min=False,
     node_multiplier=6,
-    edge_multiplier=1,
+    edge_multiplier=60,
+    figsize=(10, 12),
     return_plot=False,
     subplot_kwargs=None,
     node_kwargs=None,
@@ -32,8 +33,8 @@ def clustree(
     Daughter clusters are plotted proximal to the parent with the highest cell overlap.
 
     If rename_cluster is True, clusters are updated in adata.obs and colors are updated in adata.uns
-    such that the color is passed from parent the daughter with the largest cell overlap.
-    Note that this does **not** alter the clusters or data in any way.
+    such that cluster names and colors are consistent between resolutions.
+    Note that this does **not** alter the data in any way.
 
     :param adata: dataset
     :param columns: a list of adata.obs column names to use.
@@ -43,12 +44,13 @@ def clustree(
     :param node_size_min: allow smaller nodes to shrink beyond label size? (default: False)
     :param node_multiplier: multiply all node sizes by this factor (default: 6)
     :param edge_multiplier: multiply all edge widths by this factor (default: 1)
+    :param figsize: matplotlib figsize
+    :param return_plot: if True, returns fig and ax
     :param subplot_kwargs: kwargs passed on to plt.subplot
     :param node_kwargs: kwargs passed on to nx.draw_networkx_nodes
     :param label_kwargs: kwargs passed on to nx.draw_networkx_labels
     :param edge_kwargs: kwargs passed on to nx.draw_networkx_edges
     :param legend_kwargs: kwargs passed on to ax.legend
-    :param return_plot: if True, returns fig and ax
     :return:
     """
     columns = natsorted(columns)
@@ -72,13 +74,11 @@ def clustree(
     # 1) first row
     column = columns[0]
     res = column.rsplit("_", 1)[1]
-    # cluster2barcodes = {}
     cur_clusters = []
-    for node_name in adata.obs[column].unique():
+    for node_name in adata.obs[column].cat.categories:
         node_id = f"{res}_{node_name}"
 
         barcodes = set(adata.obs[adata.obs[column] == node_name].index)
-        # cluster2barcodes[node_id] = barcodes
         cur_clusters.append(node_id)
         top_level_clusters[node_id] = len(barcodes)
 
@@ -97,19 +97,16 @@ def clustree(
             shape="circle",
             style="filled",
         )
-    # prev_cluster2barcodes = cluster2barcodes
     prev_clusters = cur_clusters
 
     # 2) every other row
     for column in columns[1:]:
         res = column.rsplit("_", 1)[1]
-        # cluster2barcodes = {}
         cur_clusters = []
-        for node_name in adata.obs[column].unique():
+        for node_name in adata.obs[column].cat.categories:
             node_id = f"{res}_{node_name}"
 
             barcodes = set(adata.obs[adata.obs[column] == node_name].index)
-            # cluster2barcodes[node_id] = barcodes
             cur_clusters.append(node_id)
 
             # add node
@@ -130,7 +127,6 @@ def clustree(
             )
 
             # add edges to parents
-            # for parent, barcodes_parent in prev_cluster2barcodes.items():
             for parent in prev_clusters:
                 barcodes_parent = g.nodes[parent]["_barcodes"]
                 n_overlap = len(barcodes & barcodes_parent)
@@ -138,7 +134,7 @@ def clustree(
                     continue
                 # make the edge 0 width if the number of cells is too low
                 # (always draw the edge in order to plot the node in the correct location)
-                edge_size = edge_multiplier * n_overlap / 10
+                edge_size = edge_multiplier * n_overlap / n_cells_total
                 g.add_edge(
                     parent,
                     node_id,
@@ -147,7 +143,6 @@ def clustree(
                     arrowsize=0.1,  # relative to penwidth
                     color="black",
                 )
-        # prev_cluster2barcodes = cluster2barcodes
         prev_clusters = cur_clusters
 
     if rename_clusters:
@@ -168,6 +163,7 @@ def clustree(
         g,
         method_clustering,
         resolutions,
+        figsize=figsize,
         return_plot=return_plot,
         subplot_kwargs=subplot_kwargs,
         node_kwargs=node_kwargs,
@@ -272,7 +268,7 @@ def _rename_clusters_in_graph(g, cluster2color, top_level_clusters, colors):
 def _rename_clusters_in_adata(g, adata, method_clustering):
     to_rename = {}
     for node_id, md in g.nodes(data=True):
-        res, cluster = node_id.split("_")
+        res, cluster = node_id.split("_", 1)
         if res not in to_rename:
             to_rename[res] = {}
         to_rename[res][cluster] = md["label"].strip()
@@ -289,6 +285,7 @@ def _plot_clustree(
     g,
     method_clustering,
     resolutions,
+    figsize=None,
     return_plot=False,
     subplot_kwargs=None,
     node_kwargs=None,
@@ -318,7 +315,7 @@ def _plot_clustree(
         warnings.simplefilter("ignore")  # Warning: node [...] size too small for label
         pos = nx.nx_agraph.graphviz_layout(g, prog="dot")  # untangles the edges
 
-    fig, ax = plt.subplots(**subplot_kwargs)
+    fig, ax = plt.subplots(figsize=figsize, **subplot_kwargs)
     nodes = nx.draw_networkx_nodes(
         g,
         pos=pos,

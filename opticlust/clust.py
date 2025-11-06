@@ -103,7 +103,7 @@ def clustering_plot(
         raise ValueError("Please run score_resolutions() first!")
     columns = natsorted(columns)
     method_clustering, x = validate_resolutions(columns)
-    y = [len(adata.obs[c].unique()) for c in columns]
+    y = [len(adata.obs[c].cat.categories) for c in columns]
 
     # for each number of clusters, store the resolutions
     clust = {}
