@@ -1,3 +1,4 @@
+import os
 import warnings
 
 import matplotlib
@@ -42,51 +43,51 @@ fig, ax = clustree(
     adata,
     tree_columns,
     rename_clusters=False,
-    return_plot=True,
     node_multiplier=8,
-    subplot_kwargs={"figsize": (8, 10)},
+    return_plot=True,
 )
 fig.savefig("clustree_default.png")
 
 # plot the UMAPs for each resolution
-sc.pl.umap(
+fig = sc.pl.umap(
     adata,
     color=tree_columns,
     legend_loc="on data",
     alpha=0.75,
     ncols=3,
-    save="/../../umaps_default.png",
+    return_fig=True,
 )
+fig.savefig("umaps_default.png")
 
 # build tree & plotting (updates adata.obs)
 fig, ax = clustree(
     adata,
     tree_columns,
     rename_clusters=True,
-    return_plot=True,
     node_multiplier=8,
-    subplot_kwargs={"figsize": (8, 10)},
+    return_plot=True,
 )
 fig.savefig("clustree_recolored.png")
 
 # plot the UMAPs for each resolution
-sc.pl.umap(
+fig = sc.pl.umap(
     adata,
     color=tree_columns,
     legend_loc="on data",
     alpha=0.75,
     ncols=3,
-    save="/../../umaps_recolored.png",
+    return_fig=True,
 )
+fig.savefig("umaps_recolored.png")
 
 # plot the top genes per cluster for each resolution
 warnings.simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+os.makedirs("figures/heatmap", exist_ok=True)
 for i, column in enumerate([top_low, top_medium, top_high]):
     sc.tl.rank_genes_groups(adata, column, n_genes=5)
     sc.tl.dendrogram(adata, column)
     sc.pl.rank_genes_groups_heatmap(
         adata, show_gene_labels=True, save=f"/../../top_genes_heatmap_{i}.png"
     )
-    sc.pl.rank_genes_groups_dotplot(
-        adata, title=column, save=f"/../../top_genes_dotplot_{i}.png"
-    )
+    fig = sc.pl.rank_genes_groups_dotplot(adata, title=column, return_fig=True)
+    fig.savefig(f"top_genes_dotplot_{i}.png")

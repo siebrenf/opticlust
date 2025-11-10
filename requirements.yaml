@@ -1,3 +1,4 @@
+name: opticlust
 channels:
   - conda-forge
   - bioconda

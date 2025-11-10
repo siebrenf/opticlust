@@ -107,7 +107,7 @@ Output of `clustree(rename_cluster=False)` and `sc.pl.umap()`:
 <img src="imgs/clustree_default.png" width="750">
 <img src="imgs/umaps_default.png" width="750">
 
-Note how cluster 2 becomes cluster 3 at resolution 0.50.
+Note how cluster 2 becomes cluster 3 at resolution 0.43.
 This makes it difficult to track how changes in resolution impacted the clustering.
 
 
