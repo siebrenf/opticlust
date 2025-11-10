@@ -15,7 +15,7 @@ import scanpy as sc
 
 from opticlust.clust import clustering, clustering_plot
 from opticlust.recommend import recommend_resolutions, score_resolutions
-from opticlust.tree import clustree, clustree_plot
+from opticlust.tree import clustree
 from opticlust.utils import validate_resolutions
 
 matplotlib.use("agg")  # This stop images from showing and blocking pytest
@@ -54,18 +54,21 @@ def test_black_lint():
     base = dirname(dirname(__file__))
     sp.check_output(
         "black "
-        + f"{join(base, 'opticlust')} {join(base, 'tests')} {join(base, 'tutorial.py')}",
+        + f"{join(base, 'opticlust')} {join(base, 'tests')} "
+        + f"{join(base, 'tutorial.py')} {join(base, 'imgs', 'tutorial.py')}",
         shell=True,
     )
     sp.check_output(
         "isort --overwrite-in-place --profile black --conda-env requirements.yaml "
-        + f"{join(base, 'opticlust')} {join(base, 'tests')} {join(base, 'tutorial.py')}",
+        + f"{join(base, 'opticlust')} {join(base, 'tests')} "
+        + f"{join(base, 'tutorial.py')} {join(base, 'imgs', 'tutorial.py')}",
         shell=True,
     )
 
     sp.check_output(
         "ruff check --line-length 88 --extend-select C4,SIM,TCH,E4,E7,E9,F --ignore E402 "
-        + f"{join(base, 'opticlust')} {join(base, 'tests')} {join(base, 'tutorial.py')}",
+        + f"{join(base, 'opticlust')} {join(base, 'tests')} "
+        + f"{join(base, 'tutorial.py')} {join(base, 'imgs', 'tutorial.py')}",
         shell=True,
     )
 
@@ -188,50 +191,18 @@ def test_recommendresolutions_tree_columns(adata_scored, tree_columns):
     assert res_low < res_medium < res_high
 
 
-def test_buildtree_tree_data(adata_clean, tree_columns):
-    tree_data = clustree(adata_clean, tree_columns, rename_cluster=True)
-    assert isinstance(tree_data, dict) == 1
-    assert "graph" in tree_data
-    assert "dimensions" in tree_data
-    assert "axis" in tree_data
-
-
-def test_buildtree_tree_data_rename_false(adata_clean, tree_columns):
-    tree_data = clustree(adata_clean, tree_columns, rename_cluster=False)
-    assert isinstance(tree_data, dict) == 1
-    assert "graph" in tree_data
-    assert "dimensions" in tree_data
-    assert "axis" in tree_data
-
-
-def test_buildtree_columns_data(adata_clean, columns):
-    tree_data = clustree(adata_clean, columns, rename_cluster=True)
-    assert isinstance(tree_data, dict) == 1
-    assert "graph" in tree_data
-    assert "dimensions" in tree_data
-    assert "axis" in tree_data
-
-
-def test_buildtree_columns_data_rename_false(adata_clean, columns):
-    tree_data = clustree(adata_clean, columns, rename_cluster=False)
-    assert isinstance(tree_data, dict) == 1
-    assert "graph" in tree_data
-    assert "dimensions" in tree_data
-    assert "axis" in tree_data
-
-
 def test_buildtree_fail(adata_clean):
     with pytest.raises(Exception) as excinfo:
         tree_columns3 = ["random1", "random2"]
-        clustree(adata_clean, tree_columns3, rename_cluster=True)
-    assert str(excinfo.value) == "columns not found in adata.obs: 'random1'"
+        clustree(adata_clean, tree_columns3, rename_clusters=True)
+    assert (
+        str(excinfo.value) == "Column names must be in the shape '[method]_res_[res]'"
+    )
 
 
 def test_plottree_tree_data(adata_clean, tree_columns):
-    tree_data = clustree(adata_clean, tree_columns, rename_cluster=False)
-    clustree_plot(tree_data)
+    clustree(adata_clean, tree_columns, rename_clusters=False)
 
 
 def test_plottree_tree_data_rename_cluster(adata_clean, tree_columns):
-    tree_data = clustree(adata_clean, tree_columns, rename_cluster=True)
-    clustree_plot(tree_data)
+    clustree(adata_clean, tree_columns, rename_clusters=True)

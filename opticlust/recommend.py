@@ -290,48 +290,48 @@ def recommend_resolutions(
         resolution_max = df["resolutions"].max()
     if resolution_min is None:
         resolution_min = df["resolutions"].min()
-    range_max_min = resolution_max - resolution_min
-    low_resolutions = df[df["resolutions"] < round(range_max_min / 3, 1)]
-    medium_resolutions = df[
-        (df["resolutions"] >= round(range_max_min / 3, 1))
-        & (df["resolutions"] < round(range_max_min / (3 / 2), 1))
-    ]
-    high_resolutions = df[df["resolutions"] >= round(range_max_min / (3 / 2), 1)]
+    cols = natsorted(
+        df[
+            (df["resolutions"].ge(resolution_min))
+            & (df["resolutions"].le(resolution_max))
+        ].index
+    )
+    i = len(cols) // 3
+    low_resolutions = df.loc[cols[:i]].sort_values("rank")
+    medium_resolutions = df.loc[cols[i:-i]].sort_values("rank")
+    high_resolutions = df.loc[cols[-i:]].sort_values("rank")
 
     # Get the top-ranked resolution for each category
     top_overall = df.iloc[0]
-    top_low = low_resolutions.iloc[0] if not low_resolutions.empty else None
-    top_medium = medium_resolutions.iloc[0] if not medium_resolutions.empty else None
-    top_high = high_resolutions.iloc[0] if not high_resolutions.empty else None
+    top_low = low_resolutions.iloc[0]
+    top_medium = medium_resolutions.iloc[0]
+    top_high = high_resolutions.iloc[0]
 
     # Print the results
     print("\nTop Overall Rank:")
     print(top_overall)
 
-    print(f"\nTop Low Clustering Resolution <{round(range_max_min / 3, 1)}:")
+    print(f"\nTop Low Clustering Resolution <={low_resolutions['resolutions'].max()}:")
     if top_low is not None:
         print(top_low)
     else:
         print("No low clustering resolutions found.")
 
     print(
-        f"\nTop Medium Clustering Resolution (>={round(range_max_min / 3, 1)} and {round(range_max_min / (3 / 2), 1)}):"
+        f"\nTop Medium Clustering Resolution (>={medium_resolutions['resolutions'].min()}"
+        f" and {medium_resolutions['resolutions'].max()}):"
     )
     if top_medium is not None:
         print(top_medium)
     else:
         print("No medium clustering resolutions found.")
 
-    print(f"\nTop High Clustering Resolution (>={round(range_max_min / (3 / 2), 1)}):")
+    print(
+        f"\nTop High Clustering Resolution (>={high_resolutions['resolutions'].min()}):"
+    )
     if top_high is not None:
         print(top_high)
     else:
         print("No high clustering resolutions found.")
 
-    # Convert the float numbers back to original strings
-    top_overall = f"{method_clustering}_res_{top_overall['resolutions']:.2f}"
-    top_low = f"{method_clustering}_res_{top_low['resolutions']:.2f}"
-    top_medium = f"{method_clustering}_res_{top_medium['resolutions']:.2f}"
-    top_high = f"{method_clustering}_res_{top_high['resolutions']:.2f}"
-
-    return top_overall, top_low, top_medium, top_high
+    return top_overall.name, top_low.name, top_medium.name, top_high.name

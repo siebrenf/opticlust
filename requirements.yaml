@@ -1,3 +1,4 @@
+name: opticlust
 channels:
   - conda-forge
   - bioconda
@@ -10,6 +11,7 @@ dependencies:
   - natsort
   - networkx >=2.7
   - numpy >=1.23
+  - pygraphviz
   - scanpy >=1.10
   - scikit-learn >=1.1
   - tqdm

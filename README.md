@@ -54,28 +54,45 @@ pip install --editable ./opticlust --no-deps --ignore-installed
 # Tutorial output
 
 Output of `clustering_plot()` and `score_resolutions()`:
-![clustering_plot](imgs/clustering_plot.png)
-![score_resolutions](imgs/score_resolutions.png)
 
-Output of `clustree_plot()`:
-![clustree_plot_recolored](imgs/clustree_plot_recolored.png)
+[//]: # (![clustering_plot]&#40;imgs/clustering_plot.png&#41;)
+<img src="imgs/clustering_plot.png" width="750">
+
+[//]: # (![score_resolutions]&#40;imgs/score_resolutions.png&#41;)
+<img src="imgs/score_resolutions.png" width="750">
+
+Output of `clustree()`:
+
+[//]: # (![clustree_recolored]&#40;imgs/clustree_recolored.png&#41;)
+<img src="imgs/clustree_recolored.png" width="750">
 
 Output of `sc.pl.umap()`
-![umaps_recolored](imgs/umaps_recolored.png)
+
+[//]: # (![umaps_recolored]&#40;imgs/umaps_recolored.png&#41;)
+<img src="imgs/umaps_recolored.png" width="750">
 
 Output of `sc.pl.rank_genes_groups_heatmap()` and `sc.pl.rank_genes_groups_dotplot()`:
 
 `top_low` recommended resolution:
-![top_genes_heatmap_0](imgs/top_genes_heatmap_0.png)
-![top_genes_dotplot_0](imgs/top_genes_dotplot_0.png)
+
+[//]: # (![top_genes_heatmap_0]&#40;imgs/top_genes_heatmap_0.png&#41;)
+[//]: # (![top_genes_dotplot_0]&#40;imgs/top_genes_dotplot_0.png&#41;)
+<img src="imgs/top_genes_heatmap_0.png" width="750">
+<img src="imgs/top_genes_dotplot_0.png" width="750">
 
 `top_medium` recommended resolution:
-![top_genes_heatmap_1](imgs/top_genes_heatmap_1.png)
-![top_genes_dotplot_1](imgs/top_genes_dotplot_1.png)
+
+[//]: # (![top_genes_heatmap_1]&#40;imgs/top_genes_heatmap_1.png&#41;)
+[//]: # (![top_genes_dotplot_1]&#40;imgs/top_genes_dotplot_1.png&#41;)
+<img src="imgs/top_genes_heatmap_1.png" width="750">
+<img src="imgs/top_genes_dotplot_1.png" width="750">
 
 `top_high` recommended resolution:
-![top_genes_heatmap_2](imgs/top_genes_heatmap_2.png)
-![top_genes_dotplot_2](imgs/top_genes_dotplot_2.png)
+
+[//]: # (![top_genes_heatmap_2]&#40;imgs/top_genes_heatmap_2.png&#41;)
+[//]: # (![top_genes_dotplot_2]&#40;imgs/top_genes_dotplot_2.png&#41;)
+<img src="imgs/top_genes_heatmap_2.png" width="750">
+<img src="imgs/top_genes_dotplot_2.png" width="750">
 
 
 # Advantages of opticlust
@@ -84,9 +101,13 @@ The UMAPs and cluster tree plot can be compared immediately due to the automatic
 Without renaming and recoloring, figures would have looked like this:
 
 Output of `clustree(rename_cluster=False)` and `sc.pl.umap()`:
-![clustree_plot_default](imgs/clustree_plot_default.png)
-![umaps_default](imgs/umaps_default.png)
-Note how cluster 2 becomes cluster 3 at resolution 0.50.
+
+[//]: # (![clustree_default]&#40;imgs/clustree_default.png&#41;)
+[//]: # (![umaps_default]&#40;imgs/umaps_default.png&#41;)
+<img src="imgs/clustree_default.png" width="750">
+<img src="imgs/umaps_default.png" width="750">
+
+Note how cluster 2 becomes cluster 3 at resolution 0.43.
 This makes it difficult to track how changes in resolution impacted the clustering.
 
 
